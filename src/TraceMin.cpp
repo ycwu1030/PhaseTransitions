@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 10:05:45
+ * @LastEditTime : 2020-01-11 19:51:14
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -180,7 +180,9 @@ void fdf_min_wrap(const gsl_vector *x, void *param, double *f, gsl_vector *g)
 */
 _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VD x0, double t0, double tstop, double dtstart, double deltaX_target, double dtabsMax, double dtfracMax, double dtmin, double deltaX_tol, double minratio)
 {
+#if VERBOSE == 1
     printf("traceMinimum t0 = %.6f\n",t0);
+#endif
     int Ndim = x0.size();
     VVD M0_VVD = d2f_dx2(x0,t0);
     gsl_matrix_view M0 = Get_GSL_Matrix_View(M0_VVD);
@@ -273,8 +275,10 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
     while (1)
     {
         // index++;
+        #if VERBOSE == 1
         cout<<".";//<<endl;
         cout.flush();
+        #endif
         // ! Get the values at the next step
         tnext = t+dt;
         xnext = fmin(x+dxdt*dt,tnext);
@@ -339,7 +343,9 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         overX = X[X.size()-1];
         overT = T[T.size()-1];
     }
+    #if VERBOSE == 1
     cout<<endl;
+    #endif
     return {X, T, dXdT, overX, overT}; 
 }
 
@@ -483,17 +489,21 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
         if (!covered)
         {
             // * Not covered, Trace the phase
+            #if VERBOSE == 1
             cout<<"...Tracing phase starting at x = (";
             for (int ix = 0; ix < x1.size(); ix++)
             {
                 cout<<" "<<x1[ix]<<" ";
             }
             cout<<"); t = "<<t1<<" ..."<<endl;
+            #endif
             int phase_key = phases.size();
             int oldNumPoints = nextPoint.size();
             if (t1 > tLow)
             {
+                #if VERBOSE == 1
                 cout<<"......Tracing minimum down to "<<tLow<<" ......"<<endl;
+                #endif
                 down_trace = traceMinimum(f,df_dx,d2f_dxdt, d2f_dx2, x1, t1, tLow, -dt1, deltaX_target);
                 X_down = down_trace.X;
                 T_down = down_trace.T;
@@ -518,7 +528,9 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
             }
             if (t1 < tHigh)
             {
+                #if VERBOSE == 1
                 cout<<"......Tracing minimum up to "<<tHigh<<" ......"<<endl;
+                #endif
                 up_trace = traceMinimum(f,df_dx,d2f_dxdt,d2f_dx2,x1,t1,tHigh,dt1,deltaX_target);
                 X_up = up_trace.X;
                 T_up = up_trace.T;
@@ -951,10 +963,10 @@ VTC findCriticalTemperatures(MP phases, ScalarFunction f)
     return transitions;
 }
 
-TransCritical secondOrderTrans(Phase high_phase, Phase low_phase, char *str)
+TransCritical secondOrderTrans(Phase high_phase, Phase low_phase, string str)
 {
     TransCritical res;
-    if (strcmp(str,"Tcrit")==0)
+    if (str=="Tcrit")
     {
         res.Tcrit = 0.5*(high_phase.GetTmin()+low_phase.GetTmax());
         res.Tnuc = -1;

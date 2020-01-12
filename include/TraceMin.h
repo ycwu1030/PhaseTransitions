@@ -3,11 +3,12 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-23 22:12:32
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:34:06
+ * @LastEditTime : 2020-01-11 19:48:21
  */
 #ifndef TraceMin_H
 #define TraceMin_H
 #include "VTypes.h"
+#include <string>
 
 struct _traceMinimum_rval
 {
@@ -39,7 +40,7 @@ struct TransCritical
     int high_phase;
     int trantype;
 };
-TransCritical secondOrderTrans(Phase phase1, Phase phase2, char *str = "Tcrit");
+TransCritical secondOrderTrans(Phase phase1, Phase phase2, std::string = "Tcrit");
 typedef std::vector<TransCritical> VTC;
 VTC findCriticalTemperatures(MP phases, ScalarFunction f);
 
