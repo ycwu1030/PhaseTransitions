@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-13 14:18:27
+ * @LastEditTime : 2020-01-13 15:36:28
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -19,26 +19,6 @@
 
 using namespace std;
 
-/*
- * @description: Convert from VVD to gsl_matrix_view 
- * @param
- *      matrix:
- * @return: 
- *      gsl_matrix_view
-*/
-gsl_matrix_view Get_GSL_Matrix_View(VVD &matrix)
-{
-    int Ndim = matrix.size();
-    double *M0_data = new double[Ndim*Ndim];
-    for (int i = 0; i < Ndim; i++)
-    {
-        for (int j = 0; j < Ndim; j++)
-        {
-            M0_data[i*Ndim+j] = matrix[i][j];
-        }
-    }
-    return gsl_matrix_view_array(M0_data,Ndim,Ndim);
-}
 /*
  * @description: Convert from VD to gsl_vector_view
  * @param
@@ -56,7 +36,7 @@ gsl_vector_view Get_GSL_Vector_View(VD &vec)
 /*
  * @description: Get the minimum/maximum eigenvalue of a matrix
  * @param:
- *      mat:
+ *      mat: VVD
  *          The matrix which we want to get the eigenvalue
  *      sort:
  *          The gsl_eigen_sort_t sort method that sort the eigenvalue
@@ -66,9 +46,18 @@ gsl_vector_view Get_GSL_Vector_View(VD &vec)
  *      eigmax:
  *          The maximum eigenvalue
 */
-void Get_Matrix_Eigen(gsl_matrix_view mat, gsl_eigen_sort_t sort, double &eigmin, double &eigmax)
+void Get_Matrix_Eigen(VVD mat_vvd, gsl_eigen_sort_t sort, double &eigmin, double &eigmax)
 {
-    int Ndim = mat.matrix.size1;
+    int Ndim = mat_vvd.size();
+    double *M0_data = new double[Ndim*Ndim];
+    for (int i = 0; i < Ndim; i++)
+    {
+        for (int j = 0; j < Ndim; j++)
+        {
+            M0_data[i*Ndim+j] = mat_vvd[i][j];
+        }
+    }
+    gsl_matrix_view mat = gsl_matrix_view_array(M0_data,Ndim,Ndim);
     gsl_vector *eval = gsl_vector_alloc(Ndim);
     gsl_matrix *evec = gsl_matrix_alloc(Ndim,Ndim);//Just used for sorting
     gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc(Ndim);
@@ -79,6 +68,7 @@ void Get_Matrix_Eigen(gsl_matrix_view mat, gsl_eigen_sort_t sort, double &eigmin
     gsl_vector_free(eval);
     gsl_matrix_free(evec);
     gsl_eigen_symmv_free(w);
+    delete []M0_data;
 }
 
 // * The structure used to pass to following wrap function.
@@ -188,14 +178,22 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
 #endif
     int Ndim = x0.size();
     VVD M0_VVD = d2f_dx2(x0,t0);
-    gsl_matrix_view M0 = Get_GSL_Matrix_View(M0_VVD);
     double min_abs_eigen, max_abs_eigen;
-    Get_Matrix_Eigen(M0,GSL_EIGEN_SORT_ABS_ASC,min_abs_eigen,max_abs_eigen);
+    Get_Matrix_Eigen(M0_VVD,GSL_EIGEN_SORT_ABS_ASC,min_abs_eigen,max_abs_eigen);
     minratio *= abs(min_abs_eigen)/abs(max_abs_eigen);
 
     function<tuple<VD, bool>(VD,double) > dxmindt = [=](VD x, double t){
-        VVD M0_VVD = d2f_dx2(x,t);
-        gsl_matrix_view M = Get_GSL_Matrix_View(M0_VVD);
+        VVD M1_VVD = d2f_dx2(x,t);
+        double *M0_data = new double[Ndim*Ndim];
+        for (int i = 0; i < Ndim; i++)
+        {
+            for (int j = 0; j < Ndim; j++)
+            {
+                M0_data[i*Ndim+j] = M1_VVD[i][j];
+            }
+        }
+        gsl_matrix_view M = gsl_matrix_view_array(M0_data,Ndim,Ndim);
+        // gsl_matrix_view M = Get_GSL_Matrix_View(M0_VVD);
         VD b_VD = d2f_dxdt(x,t);
         gsl_vector_view b = Get_GSL_Vector_View(b_VD);
         
@@ -205,7 +203,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         gsl_linalg_LU_decomp (&M.matrix, p, &s);
         gsl_linalg_LU_solve (&M.matrix, p, &b.vector, dxdt_tmp);
         double min_eigen, max_eigen;
-        Get_Matrix_Eigen(M,GSL_EIGEN_SORT_VAL_ASC,min_eigen,max_eigen);
+        Get_Matrix_Eigen(M1_VVD,GSL_EIGEN_SORT_VAL_ASC,min_eigen,max_eigen);
         bool isneg = (min_eigen<0 || min_eigen/max_eigen < minratio);
         VD dxdt(Ndim);
         for (int i = 0; i < Ndim; i++)
@@ -214,6 +212,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         }
         gsl_vector_free(dxdt_tmp);
         gsl_permutation_free(p);
+        delete []M0_data;
         return make_tuple(dxdt, isneg);
     };
 
