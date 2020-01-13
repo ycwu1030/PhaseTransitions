@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-11 19:51:14
+ * @LastEditTime : 2020-01-13 14:18:27
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -76,6 +76,9 @@ void Get_Matrix_Eigen(gsl_matrix_view mat, gsl_eigen_sort_t sort, double &eigmin
     gsl_eigen_symmv_sort(eval,evec,sort);
     eigmin = gsl_vector_get(eval,0);
     eigmax = gsl_vector_get(eval,Ndim-1);
+    gsl_vector_free(eval);
+    gsl_matrix_free(evec);
+    gsl_eigen_symmv_free(w);
 }
 
 // * The structure used to pass to following wrap function.
@@ -209,6 +212,8 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         {
             dxdt[i] = -gsl_vector_get(dxdt_tmp,i);
         }
+        gsl_vector_free(dxdt_tmp);
+        gsl_permutation_free(p);
         return make_tuple(dxdt, isneg);
     };
 
@@ -646,6 +651,7 @@ VVD findApproxLocalMin(ScalarFunction f, VD x0, VD x1, double ti, int n, double 
             }
         }
     }
+    delete []test;
     return res;
 }
 
