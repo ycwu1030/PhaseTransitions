@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-13 15:36:28
+ * @LastEditTime : 2020-01-15 17:51:03
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -388,11 +388,12 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
     MP::iterator iter;
     int Ndim = get<0>(points[0]).size();
     double xeps = deltaX_target*1e-2;
-    function<VD(VD, double)> fmin = [=](VD x, double t){
+    function<VD(VD, double)> fmin = [=](VD xin, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
-        gsl_vector_view X = gsl_vector_view_array((x+xeps).data(),Ndim);
+        VD x_start = xin+xeps;
+        gsl_vector_view X = gsl_vector_view_array(x_start.data(),Ndim);
         minex_func.n = Ndim;
         minex_func.f = f_min_wrap;
         minex_func.df = df_min_wrap;
@@ -430,8 +431,9 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
     double t;
     for (int i = 0; i < points.size(); i++)
     {
-        x = get<0>(points[i]);
-        t = get<1>(points[i]);
+        // x = get<0>(points[i]);
+        // t = get<1>(points[i]);
+        tie(x,t) = points[i];
         nextPoint.push_back(make_tuple(t, dtstart, fmin(x,t),-1));
     }
     
