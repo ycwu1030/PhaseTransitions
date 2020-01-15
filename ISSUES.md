@@ -1,0 +1,2 @@
+- [ ] #01 Inconsistent between results on Mac and Linux
+- [ ] #02 Nan in intermeida nextPoints
