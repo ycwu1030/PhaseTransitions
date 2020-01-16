@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-15 19:32:56
+ * @LastEditTime : 2020-01-16 16:34:09
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -681,12 +681,13 @@ VVD findApproxLocalMin(ScalarFunction f, VD x0, VD x1, double ti, int n, double 
  */
 void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, double xeps, double diftol)
 {
-    function<VD(VD, double)> fmin = [=](VD x, double t){
+    function<VD(VD, double)> fmin = [&](VD x, double t){
         int Ndim = x.size();
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
-        gsl_vector_view X = gsl_vector_view_array((x+xeps).data(),Ndim);
+        VD x_start = x+xeps;
+        gsl_vector_view X = gsl_vector_view_array(x_start.data(),Ndim);
         minex_func.n = Ndim;
         minex_func.f = f_min_wrap;
         minex_func.df = df_min_wrap;
@@ -704,14 +705,17 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->gradient, 1e-4);
+            status = gsl_multimin_test_gradient(s->dx, 1e-4);
             
-        } while (status == GSL_CONTINUE && iter < 200);
+        } while (status == GSL_CONTINUE && iter < 100);
         
-        VD res(Ndim);
-        for (int i = 0; i < Ndim; i++)
+        VD res(x);
+        if (status == GSL_SUCCESS || status == GSL_ENOPROG)
         {
-            res[i] = gsl_vector_get(s->x,i);
+            for (int i = 0; i < Ndim; i++)
+            {
+                res[i] = gsl_vector_get(s->x,i);
+            }
         }
         gsl_multimin_fdfminimizer_free(s);
         return res;
