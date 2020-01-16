@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-15 17:51:03
+ * @LastEditTime : 2020-01-15 19:32:56
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -216,7 +216,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         return make_tuple(dxdt, isneg);
     };
 
-    function<VD(VD, double)> fmin = [=](VD x, double t){
+    function<VD(VD, double)> fmin = [&](VD x, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
@@ -238,15 +238,19 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->gradient, 1e-4);
+            status = gsl_multimin_test_gradient(s->dx, 1e-4);
             
-        } while (status == GSL_CONTINUE && iter < 200);
+        } while (status == GSL_CONTINUE && iter < 100);
         
-        VD res(Ndim);
-        for (int i = 0; i < Ndim; i++)
+        VD res(x);
+        if (status == GSL_SUCCESS || status == GSL_ENOPROG)
         {
-            res[i] = gsl_vector_get(s->x,i);
+            for (int i = 0; i < Ndim; i++)
+            {
+                res[i] = gsl_vector_get(s->x,i);
+            }
         }
+
         gsl_multimin_fdfminimizer_free(s);
         return res;
     };
@@ -388,7 +392,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
     MP::iterator iter;
     int Ndim = get<0>(points[0]).size();
     double xeps = deltaX_target*1e-2;
-    function<VD(VD, double)> fmin = [=](VD xin, double t){
+    function<VD(VD, double)> fmin = [&](VD xin, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
@@ -411,15 +415,19 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->gradient, 1e-4);
+            status = gsl_multimin_test_gradient(s->dx, 1e-4); // ! Checking the steps instead of gradient
             
-        } while (status == GSL_CONTINUE && iter < 200);
+        } while (status == GSL_CONTINUE && iter < 100);
         
-        VD res(Ndim);
-        for (int i = 0; i < Ndim; i++)
+        VD res(Ndim,0);
+        if (status == GSL_SUCCESS || status == GSL_ENOPROG)
         {
-            res[i] = gsl_vector_get(s->x,i);
+            for (int i = 0; i < Ndim; i++)
+            {
+                res[i] = gsl_vector_get(s->x,i);
+            }
         }
+        
         gsl_multimin_fdfminimizer_free(s);
         return res;
     };
