@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-22 22:23:51
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 10:07:30
+ * @LastEditTime : 2020-01-16 16:14:57
  */
 #include "Phases.h"
 #include <iostream>
@@ -30,15 +30,22 @@ double dF1(double x)
 
 int main(int argc, char const *argv[])
 {
+    if (argc < 2)
+    {
+        cout<<"Usage: "<<argv[0]<<" number_of_points"<<endl;
+        return -1;
+    }
+    
     double Pi = 3.14159265;
-    int N = 100;
+    int N = atoi(argv[1]);
     VD X;
     VVD FF;
     VVD DFF;
     double xx;
     for (size_t i = 0; i < N; i++)
     {
-        xx = 1+i/((double)N-1)*2*Pi;
+        if (N == 1) {xx = 1.0;}
+        else {xx = 1+i/((double)N-1)*2*Pi;}
         X.push_back(xx);
         VD atF,atDF;
         atF.push_back(F0(xx));

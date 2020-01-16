@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-20 17:28:39
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:33:30
+ * @LastEditTime : 2020-01-16 16:03:43
  */
 #ifndef PHASES_H
 #define PHASES_H
@@ -37,6 +37,8 @@ public:
     ~Phase();
 
     void SetPhase(int _key, VVD _X, VD _T, VVD _dXdT);
+    void SetUpInterpolation();
+    void FreeInterpolation();
     VD valAt(double _T);
     int GetKey() const {return key;}
     double GetTmin() const {return T.front();}

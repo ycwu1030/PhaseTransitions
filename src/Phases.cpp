@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-21 21:08:54
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:36:32
+ * @LastEditTime : 2020-01-16 16:11:10
  */
 #include "Phases.h"
 #include <iostream>
@@ -28,10 +28,7 @@ Phase::Phase(int _key, VVD _X, VD _T, VVD _dXdT)
 {
     acc = gsl_interp_accel_alloc();
     SetPhase(_key,_X,_T,_dXdT);
-    for (size_t i = 0; i < DimX; i++)
-    {
-        gsl_spline_init(inters[i],T.data(),X[i].data(),DimData);
-    }
+    SetUpInterpolation();
     NPhases++;
 }
 
@@ -46,11 +43,7 @@ Phase::Phase(const Phase &ph)
     dXdT = ph.dXdT;
     low_trans = ph.low_trans;
     high_trans = ph.high_trans;
-    for (size_t i = 0; i < DimX; i++)
-    {
-        inters.push_back(gsl_spline_alloc(gsl_interp_steffen,DimData));
-        gsl_spline_init(inters[i],T.data(),X[i].data(),DimData);
-    }
+    SetUpInterpolation();
 }
 
 Phase::Phase(const Phase &ph1, const Phase &ph2)
@@ -179,11 +172,7 @@ Phase::Phase(const Phase &ph1, const Phase &ph2)
         low_trans = ph1.low_trans;
         high_trans = ph1.high_trans;
     }
-    for (size_t i = 0; i < DimX; i++)
-    {
-        inters.push_back(gsl_spline_alloc(gsl_interp_steffen,DimData));
-        gsl_spline_init(inters[i],T.data(),X[i].data(),DimData);
-    }
+    SetUpInterpolation();
 }
 
 void Phase::SetPhase(int _key, VVD _X, VD _T, VVD _dXdT)
@@ -211,7 +200,6 @@ void Phase::SetPhase(int _key, VVD _X, VD _T, VVD _dXdT)
     {
         X.push_back(vector<double>(DimData,0.0));
         dXdT.push_back(vector<double>(DimData,0.0));
-        inters.push_back(gsl_spline_alloc(gsl_interp_steffen,DimData));
     }
     for (size_t i = 0; i < _TXdXdT.size(); i++)
     {
@@ -227,12 +215,37 @@ void Phase::SetPhase(int _key, VVD _X, VD _T, VVD _dXdT)
     }
 }
 
-Phase::~Phase()
+void Phase::SetUpInterpolation()
 {
+    FreeInterpolation();
     for (size_t i = 0; i < DimX; i++)
+    {
+        if (DimData >= 3)
+        {
+            inters.push_back(gsl_spline_alloc(gsl_interp_steffen,DimData));
+            gsl_spline_init(inters[i],T.data(),X[i].data(),DimData);
+        }
+        else if (DimData >= 2)
+        {
+            inters.push_back(gsl_spline_alloc(gsl_interp_linear,DimData));
+            gsl_spline_init(inters[i],T.data(),X[i].data(),DimData);
+        }
+        // ! if DimData == 1, no need to interpolate, just return its value;  
+    }
+}
+
+void Phase::FreeInterpolation()
+{
+    for (size_t i = 0; i < inters.size(); i++)
     {
         gsl_spline_free(inters[i]);
     }
+    inters.clear();
+}
+
+Phase::~Phase()
+{
+    FreeInterpolation();
     gsl_interp_accel_free(acc); 
 }
 
@@ -251,7 +264,14 @@ VD Phase::valAt(double _T)
     }
     for (size_t i = 0; i < DimX; i++)
     {
-        res[i]=gsl_spline_eval(inters[i],_T,acc);
+        if (DimData >= 2)
+        {
+            res[i]=gsl_spline_eval(inters[i],_T,acc);
+        }
+        else
+        {
+            res[i]=X[i][DimData-1];
+        }
     }
     return res;
 }
