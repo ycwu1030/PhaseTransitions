@@ -1,3 +1,4 @@
 - [x] #01 Inconsistent between results on Mac and Linux
     - Actually it is a bug in the code, where I didn't keep the variable for `gsl_vector_view`. Under clang, the complier keep it for me, GNU-gcc didn't
-- [ ] #02 Nan in intermeida nextPoints
+- [x] #02 Nan in intermeida nextPoints
+    - The nan is due to the minimization problem. I didn't check the convergence status.
