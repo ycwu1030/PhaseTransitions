@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-23 22:12:32
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-22 19:09:25
+ * @LastEditTime : 2020-01-23 17:11:52
  */
 #ifndef TraceMin_H
 #define TraceMin_H
@@ -25,9 +25,9 @@ struct precision_control
     double dtabsMax = 20.0; // Control the maximum step size in t, relative to the starting step size;
     double dtfracMax = 0.25;  // Control the maximum step size in t, relative to the temperature of that point;
     double dtmin = 1e-3; // Control the minimum step size in t, relative to the starting step size;
-    double deltaX_target = 1e-2; // Control the error in X we can accept;
+    double deltaX_target = 1e-3; // Control the error in X we can accept;
     double deltaX_tol = 1.2; // Setting the maximum difference between the guess minimum and the truth minimum;
-    double minratio_rel = 1e-4; // Setting the ratio between minimum eigenvalue to maximum eigenvalue, such that we treat the minimum one as zero. Relative to the initial ratio. (Assuming that we start at a point not close to saddle point)
+    double minratio_rel = 1e-2; // Setting the ratio between minimum eigenvalue to maximum eigenvalue, such that we treat the minimum one as zero. Relative to the initial ratio. (Assuming that we start at a point not close to saddle point)
     double dtstart = 1e-3; // Control the starting step size in t, relative to the difference between the lowest temperature and the highest temperature
     double tjump = 1e-3; // Control the jump step size in t, relative to the difference between the lowest temperature and the highest temperature. The `jump` means when we found one phase is end (become saddle/maximum point), we jump a step in t (decreasing or increasing depends on we were down-tracing or up-tracing) and try to start another phase
 } pre_control;

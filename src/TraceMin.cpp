@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-22 19:18:23
+ * @LastEditTime : 2020-01-23 17:17:47
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -218,7 +218,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         return make_tuple(dxdt, isneg);
     };
 
-    const double xeps = pre_control.deltaX_target * 1e-2;
+    const double xeps = pre_control.deltaX_target*1e-2;
     function<VD(VD, double)> fmin = [&](VD x, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
@@ -230,7 +230,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         minex_func.fdf = fdf_min_wrap;
         fdf_for_min par = {.f = f, .df_dx = df_dx, .t = t};
         minex_func.params = (void *)&par;
-        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, xeps*0.1,xeps);
+        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, xeps*1e-1,xeps);
         int iter = 0;
         int status;
         do
@@ -241,17 +241,26 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, xeps);
+            status = gsl_multimin_test_gradient(s->gradient, xeps);
             
         } while (status == GSL_CONTINUE && iter < 100);
         
         VD res(x);
         if (status == GSL_SUCCESS || status == GSL_ENOPROG)
         {
+            #if VERBOSE == 2
+            cout<<"status: "<<status<<"; [";
+            #endif
             for (int i = 0; i < Ndim; i++)
             {
                 res[i] = gsl_vector_get(s->x,i);
+                #if VERBOSE == 2
+                cout<<res[i]<<",";
+                #endif
             }
+            #if VERBOSE == 2
+            cout<<"]"<<endl;
+            #endif
         }
 
         gsl_multimin_fdfminimizer_free(s);
@@ -291,6 +300,16 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
     VD xnext;
     VD dxdt_next;
     // int index=0;
+    #if VERBOSE == 2
+    int index = 0;
+    cout<<">>The tracing History:"<<endl;
+    cout<<">> Starting at: T="<<t<<", [";
+    for (size_t i = 0; i < x.size(); i++)
+    {
+        cout<<x[i]<<",";
+    }
+    cout<<"]"<<endl;
+    #endif
     while (true)
     {
         // index++;
@@ -302,7 +321,21 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         tnext = t+dt;
         xnext = fmin(x+dxdt*dt,tnext);
         tie(dxdt_next, negeig) = dxmindt(xnext,tnext);
-        
+        #if VERBOSE == 2
+        index++;
+        cout<<">>>>Step-"<<index<<endl;
+        cout<<">>>>>> T="<<tnext<<" ,X=[";
+        for (size_t itemp = 0; itemp < xnext.size(); itemp++)
+        {
+            cout<<xnext[itemp]<<",";
+        }
+        cout<<"], dXdT=[";
+        for (size_t itemp = 0; itemp < xnext.size(); itemp++)
+        {
+            cout<<dxdt_next[itemp]<<",";
+        }
+        cout<<"], negeig="<<negeig<<endl;
+        #endif
         if (negeig)
         {
         // ! If negeig is true from dxmindt, that means, (xnext, tnext) already become saddle/maximum point, so we need to shrink the step and try again. And at most, at tnext and xnext, this phase will disappear, becoming saddle/maximum point
@@ -434,7 +467,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, xeps*1e-3); // ! Checking the steps instead of gradient
+            status = gsl_multimin_test_gradient(s->gradient, xeps*1e-3);
             
         } while (status == GSL_CONTINUE && iter < 100);
         
@@ -740,7 +773,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, xeps);
+            status = gsl_multimin_test_gradient(s->gradient, xeps);
             // if (status == GSL_SUCCESS)
             //     printf ("Minimum found at:\n");
 
