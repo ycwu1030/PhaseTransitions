@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2020-01-15 19:47:42
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 16:28:44
+ * @LastEditTime : 2020-01-22 16:44:46
  -->
 - [x] #01 Inconsistent between results on Mac and Linux
   - Actually it is a bug in the code, where I didn't keep the variable for `gsl_vector_view`. Under clang, the complier keep it for me, GNU-gcc didn't
@@ -15,3 +15,4 @@
   - For number of points equal to 2, use the gsl_interp_linear
   - For number of points equal to 1, no interpolation
 - [ ] #05 Two phases have just one common point, how to treat such case in removeRedundantPhases
+  - For some situation, this case happens when two phases have tiny overlap in temperature due to the poor precision in determining the local minima around that temperature.

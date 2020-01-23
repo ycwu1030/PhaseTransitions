@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2020-01-01 13:14:03
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 10:07:56
+ * @LastEditTime : 2020-01-22 19:02:49
  */
 
 #include "TraceMin.h"
@@ -98,7 +98,7 @@ int main(int argc, char const *argv[])
     VT points;
     points.push_back(make_tuple(x0,0.0));
     points.push_back(make_tuple(x1,0.0));
-    MP AllPhases = traceMultiMin(Potential,dPotential_dX,d2Potential_dXdT,d2Potential_dX2,points,0,1000,0.1);
+    MP AllPhases = traceMultiMin(Potential,dPotential_dX,d2Potential_dXdT,d2Potential_dX2,points,0,1000);
     MP::iterator iter;
     for ( iter = AllPhases.begin(); iter != AllPhases.end(); iter++)
     {

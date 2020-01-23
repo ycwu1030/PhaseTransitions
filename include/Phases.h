@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-20 17:28:39
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 16:03:43
+ * @LastEditTime : 2020-01-16 17:04:51
  */
 #ifndef PHASES_H
 #define PHASES_H
@@ -51,6 +51,7 @@ public:
     void eraseHighTrans(int _key) {high_trans.erase(_key);}
     void addLinkFrom(Phase *other_phase);
     std::string repr();
+    std::string repr_full();
 
     VVD GetX() const {return X;}
     VVD GetdXdT() const {return dXdT;}

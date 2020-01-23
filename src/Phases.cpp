@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-21 21:08:54
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 16:11:10
+ * @LastEditTime : 2020-01-16 17:18:42
  */
 #include "Phases.h"
 #include <iostream>
@@ -318,6 +318,30 @@ string Phase::repr()
     ssdX>>sdX;
     tmp<<"Phase(key="<<key<<",X="<<sX<<",T="<<sT<<",dXdT="<<sdX<<")";
     tmp>>res;
+    // printf("%s",res.c_str());
+    return res;
+}
+
+string Phase::repr_full()
+{
+    string res;
+    stringstream ssPhase;
+    ssPhase<<"Phase: "<<key<<"\n";
+    for (size_t i = 0; i < DimData; i++)
+    {
+        ssPhase<<"\t"<<i<<"\t"<<T[i]<<"\t(";
+        for (size_t j = 0; j < DimX; j++)
+        {
+            ssPhase<<X[j][i]<<",";
+        }
+        ssPhase<<")\t(";
+        for (size_t j = 0; j < DimX; j++)
+        {
+            ssPhase<<dXdT[j][i]<<",";
+        }
+        ssPhase<<")\n";
+    }
+    res = ssPhase.str();
     // printf("%s",res.c_str());
     return res;
 }

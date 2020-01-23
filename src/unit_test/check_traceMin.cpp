@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-30 20:37:46
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 10:07:44
+ * @LastEditTime : 2020-01-22 19:02:38
  */
 #include "TraceMin.h"
 #include "Phases.h"
@@ -91,7 +91,7 @@ int main(int argc, char const *argv[])
     VD x0(2);
     x0[0] = 0.0;
     x0[1] = 112.229;
-    _traceMinimum_rval res = traceMinimum(Potential,dPotential_dX,d2Potential_dXdT, d2Potential_dX2,x0,0,500,0.5,0.1);
+    _traceMinimum_rval res = traceMinimum(Potential,dPotential_dX,d2Potential_dXdT, d2Potential_dX2,x0,0,500,0.5);
     cout<<res.T.size()<<endl;
     Phase ph(0,res.X,res.T,res.dXdT);
     cout<<ph.repr()<<endl;

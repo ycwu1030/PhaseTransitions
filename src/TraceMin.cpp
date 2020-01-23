@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-29 16:15:53
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 16:34:09
+ * @LastEditTime : 2020-01-22 19:18:23
  */
 #include <iostream>
 #include "TraceMin.h"
@@ -157,7 +157,7 @@ void fdf_min_wrap(const gsl_vector *x, void *param, double *f, gsl_vector *g)
  *          ``deltaX_tol*deltaX_target`` gives the maximum error in x
  *          before we want to shrink the stepsize and recalculate the
  *          minimum
- *      minratio: default = 1e-2
+ *      minratio: default = 1e-4
  *          The smallest ratio between smallest and largest eigenvalues
  *          in the Hessian Matrix before treating the smallest
  *          eigenvalue as zero (and thus signaling a saddle point and
@@ -171,7 +171,7 @@ void fdf_min_wrap(const gsl_vector *x, void *param, double *f, gsl_vector *g)
  *      overT:
  *          The t-value beyond which the phase seems to disappear
 */
-_traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VD x0, double t0, double tstop, double dtstart, double deltaX_target, double dtabsMax, double dtfracMax, double dtmin, double deltaX_tol, double minratio)
+_traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VD x0, double t0, double tstop, double dtstart/*, double deltaX_target, double dtabsMax, double dtfracMax, double dtmin, double deltaX_tol, double minratio*/)
 {
 #if VERBOSE == 1
     printf("traceMinimum t0 = %.6f\n",t0);
@@ -180,9 +180,12 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
     VVD M0_VVD = d2f_dx2(x0,t0);
     double min_abs_eigen, max_abs_eigen;
     Get_Matrix_Eigen(M0_VVD,GSL_EIGEN_SORT_ABS_ASC,min_abs_eigen,max_abs_eigen);
-    minratio *= abs(min_abs_eigen)/abs(max_abs_eigen);
 
-    function<tuple<VD, bool>(VD,double) > dxmindt = [=](VD x, double t){
+    // This determine when we treat the matrix is singular
+    double minratio = abs(min_abs_eigen)/abs(max_abs_eigen) * pre_control.minratio_rel;
+
+    // This function determine the dx/dt at minimum point, and also check whether we encounter saddle/maximum point
+    function<tuple<VD, bool>(VD,double) > dxmindt = [&](VD x, double t){
         VVD M1_VVD = d2f_dx2(x,t);
         double *M0_data = new double[Ndim*Ndim];
         for (int i = 0; i < Ndim; i++)
@@ -193,7 +196,6 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             }
         }
         gsl_matrix_view M = gsl_matrix_view_array(M0_data,Ndim,Ndim);
-        // gsl_matrix_view M = Get_GSL_Matrix_View(M0_VVD);
         VD b_VD = d2f_dxdt(x,t);
         gsl_vector_view b = Get_GSL_Vector_View(b_VD);
         
@@ -216,6 +218,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         return make_tuple(dxdt, isneg);
     };
 
+    const double xeps = pre_control.deltaX_target * 1e-2;
     function<VD(VD, double)> fmin = [&](VD x, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
@@ -227,7 +230,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         minex_func.fdf = fdf_min_wrap;
         fdf_for_min par = {.f = f, .df_dx = df_dx, .t = t};
         minex_func.params = (void *)&par;
-        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, 1e-3,1e-4);
+        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, xeps*0.1,xeps);
         int iter = 0;
         int status;
         do
@@ -238,7 +241,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, 1e-4);
+            status = gsl_multimin_test_gradient(s->dx, xeps);
             
         } while (status == GSL_CONTINUE && iter < 100);
         
@@ -255,21 +258,29 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         return res;
     };
 
-    deltaX_tol = deltaX_tol * deltaX_target;
-    double tscale = abs(dtstart);
-    dtabsMax = dtabsMax*tscale;
-    dtmin = dtmin * tscale;
+//  1.2 usr_set   1.2       *  usr_set
+    const double deltaX_tol = pre_control.deltaX_tol * pre_control.deltaX_target;
+//  initial step in t
+    const double tscale = abs(dtstart);
+//                          20     * initial step in t
+    const double dtabsMax = pre_control.dtabsMax*tscale;
 
-    VD x = fmin(x0,t0);
+//          1e-3  * initial step in t
+    const double dtmin = pre_control.dtmin * tscale;
+
+    VD x = fmin(x0,t0); // Re-find the minimum point to make sure it is the local minimum.
     double t = t0;
     double dt = dtstart;
     double xerr = 0.0;
     VD dxdt;
     bool negeig;
     tie(dxdt,negeig) = dxmindt(x,t);
-    VVD X;
-    VD T;
-    VVD dXdT;
+
+    VVD X; // Store the minimum points
+    VD T; // Store the temperature at each point
+    VVD dXdT; // Store the dX/dT at each point
+
+    // ! push in the first point
     X.push_back(x);
     T.push_back(t);
     dXdT.push_back(dxdt);
@@ -280,7 +291,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
     VD xnext;
     VD dxdt_next;
     // int index=0;
-    while (1)
+    while (true)
     {
         // index++;
         #if VERBOSE == 1
@@ -294,6 +305,7 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
         
         if (negeig)
         {
+        // ! If negeig is true from dxmindt, that means, (xnext, tnext) already become saddle/maximum point, so we need to shrink the step and try again. And at most, at tnext and xnext, this phase will disappear, becoming saddle/maximum point
             dt *= 0.5;
             overX = xnext;
             overT = tnext;
@@ -304,12 +316,15 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             xerr = sqrt(max((x+dxdt*dt - xnext)*(x+dxdt*dt - xnext),(xnext-dxdt_next*dt - x)*(xnext-dxdt_next*dt - x)));
             if (xerr < deltaX_tol)
             {
+                // ! The step is good, push back the point we got.
                 T.push_back(tnext);
                 X.push_back(xnext);
                 dXdT.push_back(dxdt_next);
                 if (overT < -10)
                 {
-                    dt *= deltaX_target/(xerr+1e-30);
+                    // ! If we haven't yet encounter a saddle point, we can change the step size to accelerate the trace
+                    // ! The step size is changed according to the current xerr between guessed point and true (from fmin) point and the precision in X we want to achieve.
+                    dt *= pre_control.deltaX_target/(xerr+1e-30);
                 }
                 x = xnext;
                 t = tnext;
@@ -338,9 +353,11 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
             X[X.size()-1] = x;
             T[T.size()-1] = t;
             dXdT[dXdT.size()-1] = dxdt;
+            overX.clear();
+            overT = -11; //! As we hit the stop point, no over point, or you can also say the over point is the last point, which will be set after the loop in the following.
             break;
         }
-        double dtmax = max(t*dtfracMax, dtabsMax);
+        double dtmax = max(t*pre_control.dtfracMax, dtabsMax);
         if (abs(dt) > dtmax)
         {
             dt = abs(dt)/dt*dtmax;
@@ -382,21 +399,23 @@ _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalar
  *          A map from key => Phase
  *          The key is unique for each phase.
  */
-MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VT points, double tLow, double tHigh, double deltaX_target, double dtstart, double tjump, forbidCrit fc)
+MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VT points, double tLow, double tHigh, /*double deltaX_target, double dtstart, double tjump,*/ forbidCrit fc)
 {
     MP phases;
     if (points.size()==0)
     {
+        // ! No point provide, nothing to be started with
         return phases;
     }
     MP::iterator iter;
     int Ndim = get<0>(points[0]).size();
-    double xeps = deltaX_target*1e-2;
+    const double xeps = pre_control.deltaX_target*1e-2;
     function<VD(VD, double)> fmin = [&](VD xin, double t){
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
         VD x_start = xin+xeps;
+        // VD x_start = xin + 0.1;
         gsl_vector_view X = gsl_vector_view_array(x_start.data(),Ndim);
         minex_func.n = Ndim;
         minex_func.f = f_min_wrap;
@@ -404,7 +423,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
         minex_func.fdf = fdf_min_wrap;
         fdf_for_min par = {.f = f, .df_dx = df_dx, .t = t};
         minex_func.params = (void *)&par;
-        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, 1e-3,1e-4);
+        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, xeps*0.1,xeps);
         int iter = 0;
         int status;
         do
@@ -415,7 +434,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, 1e-4); // ! Checking the steps instead of gradient
+            status = gsl_multimin_test_gradient(s->dx, xeps*1e-3); // ! Checking the steps instead of gradient
             
         } while (status == GSL_CONTINUE && iter < 100);
         
@@ -432,15 +451,13 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
         return res;
     };
 
-    dtstart = dtstart * (tHigh-tLow);
-    tjump = tjump * (tHigh-tLow);
+    const double dtstart = pre_control.dtstart * (tHigh-tLow);
+    const double tjump = pre_control.tjump * (tHigh-tLow);
     VnT nextPoint;
     VD x;
     double t;
     for (int i = 0; i < points.size(); i++)
     {
-        // x = get<0>(points[i]);
-        // t = get<1>(points[i]);
         tie(x,t) = points[i];
         nextPoint.push_back(make_tuple(t, dtstart, fmin(x,t),-1));
     }
@@ -448,8 +465,24 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
     VD x1;
     double t1, dt1;
     int linkedFrom;
+    int round = 0;
     while (nextPoint.size()!=0)
     {
+        #if VERBOSE == 2
+        round++;
+        cout<<"At round: "<<round<<endl;
+        for (size_t i = 0; i < nextPoint.size(); i++)
+        {
+            tie(t1,dt1,x1,linkedFrom) = nextPoint[i];
+            cout<<"Point-"<<i<<" T="<<t1<<", X=[";
+            for (size_t j = 0; j < x1.size(); j++)
+            {
+                cout<<x1[j]<<",";
+            }
+            cout<<"]"<<endl;
+        }
+        #endif
+
         tie(t1,dt1,x1,linkedFrom) = nextPoint.back();
         nextPoint.pop_back();
         
@@ -482,7 +515,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
                 continue;
             }
             x = fmin(ph->valAt(t1),t1);
-            if (sqrt((x-x1)*(x-x1)) < 2*deltaX_target)
+            if (sqrt((x-x1)*(x-x1)) < 2*pre_control.deltaX_target)
             {
                 // * This point is already covered
                 if (linkedFrom != index && linkedFrom != -1)
@@ -518,7 +551,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
                 #if VERBOSE == 1
                 cout<<"......Tracing minimum down to "<<tLow<<" ......"<<endl;
                 #endif
-                down_trace = traceMinimum(f,df_dx,d2f_dxdt, d2f_dx2, x1, t1, tLow, -dt1, deltaX_target);
+                down_trace = traceMinimum(f,df_dx,d2f_dxdt, d2f_dx2, x1, t1, tLow, -dt1);
                 X_down = down_trace.X;
                 T_down = down_trace.T;
                 dXdT_down = down_trace.dXdT;
@@ -528,7 +561,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
                 dt2 = 0.1*tjump;
                 x2 = fmin(nX,t2);
                 nextPoint.push_back(make_tuple(t2,dt2,x2,phase_key));
-                if (sqrt((X_down.back()-x2)*(X_down.back()-x2))>deltaX_target*deltaX_target)
+                if (sqrt((X_down.back()-x2)*(X_down.back()-x2))>pow(pre_control.deltaX_target,2))
                 {
                     points = findApproxLocalMin(f,X_down.back(),x2,t2);
                     for (int ipoints = 0; ipoints < points.size(); ipoints++)
@@ -545,7 +578,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
                 #if VERBOSE == 1
                 cout<<"......Tracing minimum up to "<<tHigh<<" ......"<<endl;
                 #endif
-                up_trace = traceMinimum(f,df_dx,d2f_dxdt,d2f_dx2,x1,t1,tHigh,dt1,deltaX_target);
+                up_trace = traceMinimum(f,df_dx,d2f_dxdt,d2f_dx2,x1,t1,tHigh,dt1);
                 X_up = up_trace.X;
                 T_up = up_trace.T;
                 dXdT_up = up_trace.dXdT;
@@ -555,7 +588,7 @@ MP traceMultiMin(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dx
                 dt2 = 0.1*tjump;
                 x2 = fmin(nX,t2);
                 nextPoint.push_back(make_tuple(t2,dt2,x2,phase_key));
-                if (sqrt((X_up.back()-x2)*(X_up.back()-x2))>deltaX_target*deltaX_target)
+                if (sqrt((X_up.back()-x2)*(X_up.back()-x2))>pow(pre_control.deltaX_target,2))
                 {
                     points = findApproxLocalMin(f,X_up.back(),x2,t2);
                     for (int ipoints = 0; ipoints < points.size(); ipoints++)
@@ -681,12 +714,14 @@ VVD findApproxLocalMin(ScalarFunction f, VD x0, VD x1, double ti, int n, double 
  */
 void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, double xeps, double diftol)
 {
+    // xeps = 0.1;
     function<VD(VD, double)> fmin = [&](VD x, double t){
         int Ndim = x.size();
         const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
         gsl_multimin_fdfminimizer *s = gsl_multimin_fdfminimizer_alloc(T, Ndim);
         gsl_multimin_function_fdf minex_func;
         VD x_start = x+xeps;
+        // printf("starting at: %.5f, %.5f\n",x_start[0],x_start[1]);
         gsl_vector_view X = gsl_vector_view_array(x_start.data(),Ndim);
         minex_func.n = Ndim;
         minex_func.f = f_min_wrap;
@@ -694,7 +729,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
         minex_func.fdf = fdf_min_wrap;
         fdf_for_min par = {.f = f, .df_dx = df_dx, .t = t};
         minex_func.params = (void *)&par;
-        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, 1e-3,1e-4);
+        gsl_multimin_fdfminimizer_set(s, &minex_func, &X.vector, xeps*0.1,xeps);
         int iter = 0;
         int status;
         do
@@ -705,8 +740,14 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
             {
                 break;
             }
-            status = gsl_multimin_test_gradient(s->dx, 1e-4);
-            
+            status = gsl_multimin_test_gradient(s->dx, xeps);
+            // if (status == GSL_SUCCESS)
+            //     printf ("Minimum found at:\n");
+
+            // printf ("%5d %.5f %.5f %10.5f\n", iter,
+            //   gsl_vector_get (s->x, 0),
+            //   gsl_vector_get (s->x, 1),
+            //   s->f);
         } while (status == GSL_CONTINUE && iter < 100);
         
         VD res(x);
@@ -744,6 +785,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
             for (iter2 = phases.begin(); iter2 != phases.end(); iter2++)
             {
                 index2 = iter2->first;
+                // cout<<"----"<<index1<<" "<<index2<<endl;
                 if (index1 == index2)
                 {
                     continue;
@@ -768,6 +810,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
                 {
                     x1 = fmin(phase1.valAt(tmax),tmax);
                 }
+                // cout<<"Phase 1 xmax:"<<x1[0]<<" "<<x1[1]<<endl;
                 if (tmax == tmax2)
                 {
                     x2 = phase2.GetXatTmax();
@@ -776,6 +819,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
                 {
                     x2 = fmin(phase2.valAt(tmax),tmax);
                 }
+                // cout<<"Phase 2 xmax:"<<x2[0]<<" "<<x2[1]<<endl;
                 dif = sqrt((x2-x1)*(x2-x1));
                 same_at_tmax = (dif < diftol);
                 if (tmin == tmin1)
@@ -786,6 +830,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
                 {
                     x1 = fmin(phase1.valAt(tmin),tmin);
                 }
+                // cout<<"Phase 1 xmin:"<<x1[0]<<" "<<x1[1]<<endl;
                 if (tmin == tmin2)
                 {
                     x2 = phase2.GetXatTmin();
@@ -794,6 +839,7 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
                 {
                     x2 = fmin(phase2.valAt(tmin),tmin);
                 }
+                // cout<<"Phase 2 xmin:"<<x2[0]<<" "<<x2[1]<<endl;
                 dif = sqrt((x2-x1)*(x2-x1));
                 same_at_tmin = (dif < diftol);
                 if (same_at_tmin && same_at_tmax)
