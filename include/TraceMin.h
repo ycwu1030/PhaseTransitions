@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-23 22:12:32
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-23 17:11:52
+ * @LastEditTime : 2020-01-26 22:25:30
  */
 #ifndef TraceMin_H
 #define TraceMin_H
@@ -30,7 +30,9 @@ struct precision_control
     double minratio_rel = 1e-2; // Setting the ratio between minimum eigenvalue to maximum eigenvalue, such that we treat the minimum one as zero. Relative to the initial ratio. (Assuming that we start at a point not close to saddle point)
     double dtstart = 1e-3; // Control the starting step size in t, relative to the difference between the lowest temperature and the highest temperature
     double tjump = 1e-3; // Control the jump step size in t, relative to the difference between the lowest temperature and the highest temperature. The `jump` means when we found one phase is end (become saddle/maximum point), we jump a step in t (decreasing or increasing depends on we were down-tracing or up-tracing) and try to start another phase
-} pre_control;
+};
+
+extern precision_control pre_control;
 
 
 _traceMinimum_rval traceMinimum(ScalarFunction f, dScalarFunction df_dx, dScalarFunction d2f_dxdt, HM d2f_dx2, VD x0, double t0, double tstop, double dtstart/*, double deltaX_target, double dtabsMax=20.0, double dtfracMax=0.25, double dtmin=1e-3, double deltaX_tol=1.2, double minratio=1e-4*/);
@@ -43,18 +45,5 @@ void removeRedundantPhases(ScalarFunction f, dScalarFunction df_dx, MP &phases, 
 
 void _removeRedundantPhase(MP &phases,int index_removed, int index_phase);
 
-struct TransCritical
-{
-    double Tcrit;
-    double Tnuc;
-    VD low_vev;
-    VD high_vev;
-    int low_phase;
-    int high_phase;
-    int trantype;
-};
-TransCritical secondOrderTrans(Phase phase1, Phase phase2, std::string = "Tcrit");
-typedef std::vector<TransCritical> VTC;
-VTC findCriticalTemperatures(MP phases, ScalarFunction f);
 
 #endif

@@ -3,10 +3,11 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2020-01-02 22:31:11
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-22 19:01:50
+ * @LastEditTime : 2020-01-23 23:02:13
  */
 #include "TraceMin.h"
 #include "Phases.h"
+#include "TransitionFinder.h"
 #include <iostream>
 #include <cmath>
 
@@ -114,10 +115,10 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < resTc.size(); i++)
     {
         cout<<"Tc: "<<i<<endl;
-        cout<<"\t Tc: "<< resTc[i].Tcrit<<endl;
+        cout<<"\t Tc: "<< resTc[i].T[resTc[i].trantype]<<endl;
         cout<<"\t High Phase:"<<resTc[i].high_phase<<endl;
         cout<<"\t Low Phase:"<<resTc[i].low_phase<<endl;
-        cout<<"\t TransType:"<<resTc[i].trantype<<endl;
+        cout<<"\t TransOrder:"<<resTc[i].tranorder<<endl;
     }
     
     return 0;
