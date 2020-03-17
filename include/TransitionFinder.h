@@ -1,10 +1,3 @@
-/*
- * @Description  : 
- * @Author       : Yongcheng Wu
- * @Date         : 2020-01-23 18:00:46
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-26 23:50:05
- */
 #ifndef TransitionFinder_H
 #define TransitionFinder_H
 

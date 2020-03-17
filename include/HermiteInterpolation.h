@@ -1,9 +1,5 @@
 /*
  * @Description  : Containing the class doing Hermite Interpolation
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-22 12:45:50
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:32:41
  */
 #ifndef Hermite_Interpolation_H
 #define Hermite_Interpolation_H

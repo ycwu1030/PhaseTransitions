@@ -1,10 +1,3 @@
-/*
- * @Description  : 
- * @Author       : Yongcheng Wu
- * @Date         : 2020-01-23 18:03:24
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-26 23:48:49
- */
 #include "TransitionFinder.h"
 #include <tuple>
 #include <functional>

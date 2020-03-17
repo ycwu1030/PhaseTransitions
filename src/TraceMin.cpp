@@ -1,9 +1,5 @@
 /*
  * @Description  : Trace the minima of a potential and find critical temperature
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-29 16:15:53
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-26 22:29:55
  */
 #include <iostream>
 #include "TraceMin.h"

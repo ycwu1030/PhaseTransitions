@@ -1,9 +1,5 @@
 /*
  * @Description  : Phase Class store the information of a phase in a temperature period
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-20 17:28:39
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 17:04:51
  */
 #ifndef PHASES_H
 #define PHASES_H

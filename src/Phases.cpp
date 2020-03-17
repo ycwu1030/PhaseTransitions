@@ -1,10 +1,3 @@
-/*
- * @Description  : Phase class
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-21 21:08:54
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-16 17:18:42
- */
 #include "Phases.h"
 #include <iostream>
 #include <sstream>

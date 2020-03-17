@@ -1,9 +1,5 @@
 /*
  * @Description  : Hermite Interpolation
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-22 14:09:07
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:36:00
  */
 #include "HermiteInterpolation.h"
 using namespace std;

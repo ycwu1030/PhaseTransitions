@@ -1,9 +1,5 @@
 /*
  * @Description  : Tracing the minima of a potential and find Critical Temperature
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-23 22:12:32
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-26 22:25:30
  */
 #ifndef TraceMin_H
 #define TraceMin_H

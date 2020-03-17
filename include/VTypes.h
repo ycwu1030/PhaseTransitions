@@ -1,10 +1,3 @@
-/*
- * @Description  : typedef for convenience 
- * @Author       : Yongcheng Wu
- * @Date         : 2019-12-22 13:50:35
- * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 09:34:49
- */
 #ifndef VTypes_H
 #define VTypes_H
 #include <vector>
