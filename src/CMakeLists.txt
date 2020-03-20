@@ -14,14 +14,14 @@ ADD_LIBRARY(PhaseTransition_static STATIC ${PhaseTransition_SOURCE})
 SET_TARGET_PROPERTIES(PhaseTransition_static PROPERTIES LINKER_LANGUAGE CXX
     VERSION ${PhaseTransition_VERSION} OUTPUT_NAME phasetransition
 )
-TARGET_LINK_LIBRARIES(PhaseTransition_static ${GSL_LIBRARIES})
+TARGET_LINK_LIBRARIES(PhaseTransition_static ${GSL_LIBRARIES} ${Boost_LIBRARIES})
 
 # libphasetransition.so
 ADD_LIBRARY(PhaseTransition_shared SHARED ${PhaseTransition_SOURCE})
 SET_TARGET_PROPERTIES(PhaseTransition_shared PROPERTIES LINKER_LANGUAGE CXX
     VERSION ${PhaseTransition_VERSION} OUTPUT_NAME phasetransition
 )
-TARGET_LINK_LIBRARIES(PhaseTransition_shared ${GSL_LIBRARIES})
+TARGET_LINK_LIBRARIES(PhaseTransition_shared ${GSL_LIBRARIES} ${Boost_LIBRARIES})
 
 SET(PhaseTransition_LIBRARIES PhaseTransition_shared)
 

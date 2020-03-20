@@ -6,7 +6,8 @@ PROJECT(PhaseTransitions CXX)
 SET(PhaseTransition_VERSION "0.2")
 
 find_package(GSL 2.1 REQUIRED)
-include_directories(include ${GSL_INCLUDE_DIRS})
+find_package(Boost 1.40 REQUIRED math_tr1l)
+include_directories(include ${GSL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
 
