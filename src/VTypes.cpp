@@ -1,6 +1,16 @@
 #include <VTypes.h>
+#include <cmath>
 using namespace std;
 
+vector<double> abs(const vector<double> &input)
+{
+    vector<double> res;
+    for (int i = 0; i < input.size(); ++i)
+    {
+        res.push_back(abs(input[i]));
+    }
+    return res;
+}
 
 vector<double> operator+(const vector<double> &lhs, const vector<double> &rhs){
     vector<double> res;
@@ -70,4 +80,42 @@ double operator*(const vector<double> &lhs, const vector<double> &rhs)
         res += lhs[i]*rhs[i];
     }
     return res;
+}
+vector<double> operator/(const vector<double> &lhs, const double &s)
+{
+    vector<double> res;
+    for (int i = 0; i < lhs.size(); ++i)
+    {
+        res.push_back(lhs[i]/s);
+    }
+    return res;
+}
+
+vector<double> operator/(const vector<double> &lhs, const vector<double> &rhs)
+{
+    vector<double> res;
+    for (int i = 0; i < lhs.size(); ++i)
+    {
+        res.push_back(lhs[i]/rhs[i]);
+    }
+    return res;
+}
+VVD operator/(const VVD &lhs, const double &s)
+{
+    VVD res;
+    for (int i = 0; i < lhs.size(); ++i)
+    {
+        res.push_back(lhs[i]/s);
+    }
+    return res;
+}
+
+ostream& operator<<(ostream& out, const VD& s)
+{
+    for (size_t i = 0; i < s.size()-1; i++)
+    {
+        out<<s[i]<<"\t";
+    }
+    out<<s[s.size()-1];
+    return out;
 }

@@ -3,17 +3,60 @@
 #include <iostream>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_min.h>
+#include <gsl/gsl_roots.h>
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/bessel.hpp>
 
 using namespace std;
 using namespace boost::math;
 
+typedef double (*root_func)(double,void*);
+double find_root_gsl_wraper(root_func func, void *params, double x_max, double x_min)
+{
+    int status;
+    int iter = 0, max_iter = 100;
+    const gsl_root_fsolver_type *T = gsl_root_fsolver_brent;
+    gsl_root_fsolver *s = gsl_root_fsolver_alloc(T);
+    double r;
+    double r_min = x_min;
+    double r_max = x_max;
+
+    gsl_function F;
+    // struct param_initialConditions params = {this, phi0, dV0, d2V0, phi_absMin, delta_phi_cutoff};
+
+    F.function = func;
+    F.params = params;
+
+    gsl_root_fsolver_set(s, &F, r_min, r_max);
+
+    do
+    {
+        iter++;
+        status = gsl_root_fsolver_iterate(s);
+        r      = gsl_root_fsolver_root(s);
+        r_min  = gsl_root_fsolver_x_lower(s);
+        r_max  = gsl_root_fsolver_x_upper(s);
+        status = gsl_root_test_interval(r_min,r_max,1e-8,1e-10);
+    } while (status == GSL_CONTINUE && iter < max_iter);
+    
+    gsl_root_fsolver_free(s);
+    return r;
+}
+
+VD func_for_rkqc(double r, VD y, void *param)
+{
+    Tunneling1D *mod = (Tunneling1D*) param;
+    return mod->equationOfMotion(r,y);
+}
 Tunneling1D::Tunneling1D()
 {
     V = nullptr;
     dV = nullptr;
     d2V = nullptr;
+
+    _rk_calculator.SetDOF(2);
+    _rk_calculator.SetODE(func_for_rkqc);
+    _rk_calculator.SetParams(this);
 
     phi_absMin = NAN;
     phi_metaMin = NAN;
@@ -198,4 +241,185 @@ tuple<double, double> Tunneling1D::exactSolution(double r, double phi0, double d
         phi += phi0;
     }
     return make_tuple(phi,dphi);    
+}
+struct param_initialConditions
+{
+    Tunneling1D *tun;
+    double phi0;
+    double dV0;
+    double d2V0;
+
+    double phi_absMin;
+    double delta_phi_cutoff;
+};
+double func_for_initialConditions(double r, void *params)
+{
+    param_initialConditions *mod = (param_initialConditions*)params;
+    double phi0 = mod->phi0;
+    double dV0 = mod->dV0;
+    double d2V0 = mod->d2V0;
+    double phi_absMin = mod->phi_absMin;
+    double delta_phi_cutoff = mod->delta_phi_cutoff;
+    double phir,dphir;
+    tie(phir,dphir) = (mod->tun)->exactSolution(r,phi0,dV0,d2V0);
+    return abs(phir - phi_absMin) - abs(delta_phi_cutoff);
+}
+tuple<double, double, double> Tunneling1D::initialConditions(double delta_phi0, double rmin, double delta_phi_cutoff)
+{
+    /* 
+    * Find the initial conditions for the ODE integration.
+    * 
+    * The instanton equations of motion are singular at `r=0`, 
+    * so we need to start the integration at some larger radius. 
+    * This function finds the value `r0` such that `phi(r0) = phi_cutoff`.
+    * If there is no such value, it returns the intial conditions at `rmin`.
+    */
+   
+    double phi0 = phi_absMin + delta_phi0;
+    double dV0 = dV_from_absMin(delta_phi0);
+    double d2V0 = d2V({phi0},0)[0][0];
+
+    double phi_rmin, dphi_rmin;
+    tie(phi_rmin, dphi_rmin) = exactSolution(rmin, phi0, dV0, d2V0);
+    if (abs(phi_rmin - phi_absMin) > abs(delta_phi_cutoff))
+    {
+        return make_tuple(rmin, phi_rmin, dphi_rmin);
+    }
+    if (sign(dphi_rmin) != sign(delta_phi0))
+    {
+        return make_tuple(rmin, phi_rmin, dphi_rmin);
+    }
+    
+    double r_cur = rmin;
+    double r_last = rmin;
+
+    double phi, dphi;
+
+    while (std::isfinite(r_cur))
+    {
+        r_last = r_cur;
+        r_cur *= 10;
+        tie(phi, dphi) = exactSolution(r_cur, phi0, dV0, d2V0);
+        if (abs(phi - phi_absMin) > abs(delta_phi_cutoff))
+        {
+            break;
+        }
+    }
+    struct param_initialConditions params = {this, phi0, dV0, d2V0, phi_absMin, delta_phi_cutoff};
+    double r = find_root_gsl_wraper(&func_for_initialConditions,&params,r_cur,r_last);
+
+    tie(phi,dphi) = exactSolution(r,phi0,dV0,d2V0);
+    return make_tuple(r,phi,dphi);    
+}
+VD Tunneling1D::equationOfMotion(double r, VD y)
+{
+    VD res(2);
+    res[0] = y[1];
+    res[1] = dV({y[0]},0)[0]-alpha*y[1]/r;
+    return res;
+}
+struct cubic_param
+{
+    double y0;
+    double dy0;
+    double y1;
+    double dy1;
+    double diff;
+};
+
+double cubicInterpolation(double x, void *param)
+{
+    cubic_param* mod = (cubic_param*)param;
+    double mt = 1-x;
+    double c3 = mod->y1;
+    double c2 = mod->y1 - mod->dy1/3.0;
+    double c1 = mod->y0 + mod->dy0/3.0;
+    double c0 = mod->y0;
+    return c0*pow(mt,3) + 3*c1*mt*mt*x + 3*c2*mt*x*x + c3*pow(x,3) - mod->diff;
+}
+tuple<double, VD, CONVERGENCETYPE> Tunneling1D::integrateProfile(double r0, VD y0, double dr0, double epsfrac, double epsabs, double drmin, double rmax)
+{
+    VD y_final_value = {phi_metaMin,0};
+    VD y_diff;
+    double dr_guess = dr0;
+    double dr_did,dr_next;
+    double r = r0;
+    VD y = y0;
+    VD dydr = equationOfMotion(r,y);
+    double r_cache;
+    VD y_cache;
+    VD dydr_cache;
+    VD y_scale;
+    VD y_inter(2);
+    int ysign = sign(y0[0]-phi_metaMin);
+    rmax += r0;
+
+    CONVERGENCETYPE convergQ = NONE;
+    cubic_param inter_param;
+    double x;
+    while (true)
+    {
+        y_scale = abs(y)+abs(dydr*dr_guess);
+        r_cache = r;
+        y_cache = y;
+        dydr_cache = dydr;
+        _rk_calculator._RKQC_SingleStep(r_cache,y_cache,dydr_cache,dr_guess,epsabs,y_scale,dr_did,dr_next);
+        dydr_cache = equationOfMotion(r_cache,y_cache);
+
+        y_diff = abs(y_cache-y_final_value);
+        if ( y_diff[0] < epsabs && y_diff[1] < epsabs)
+        {
+            convergQ = CONVERGED;
+            break;
+        }
+        
+        if (y_cache[1]*ysign > 0)
+        {
+            // This means the `ball` is heading back, so it will never reach the desired point.
+            convergQ = UNDERSHOOT;
+            inter_param = {y[1],dydr[1]*dr_did,y_cache[1],dydr_cache[1]*dr_did,0};
+            x = find_root_gsl_wraper(&cubicInterpolation,&inter_param,1,0);
+            r += dr_did*x;
+            y_inter[1] = cubicInterpolation(x,&inter_param);
+            inter_param = {y[0],dydr[0]*dr_did,y_cache[0],dydr_cache[0]*dr_did,0};
+            y_inter[0] = cubicInterpolation(x,&inter_param);
+            y = y_inter;
+            break;
+        }
+
+        if ((y_cache[0]-phi_metaMin)*ysign<0)
+        {
+            // Already passing the desired ending point
+            convergQ = OVERSHOOT;
+            inter_param = {y[0],dydr[0]*dr_did,y_cache[0],dydr_cache[0]*dr_did,phi_metaMin};
+            x = find_root_gsl_wraper(&cubicInterpolation,&inter_param,1,0);
+            r += dr_did*x;
+            inter_param = {y[1],dydr[1]*dr_did,y_cache[1],dydr_cache[1]*dr_did,0};
+            y_inter[1] = cubicInterpolation(x,&inter_param);
+            inter_param = {y[0],dydr[0]*dr_did,y_cache[0],dydr_cache[0]*dr_did,0};
+            y_inter[0] = cubicInterpolation(x,&inter_param);
+            y = y_inter;
+            break;
+        }
+
+        r = r_cache;
+        y = y_cache;
+        dydr = dydr_cache;
+        dr_guess = dr_next;
+    }
+    y_diff = abs(y-y_final_value);
+    if ( y_diff[0] < epsabs && y_diff[1] < epsabs)
+    {
+        convergQ = CONVERGED;
+    }
+    return make_tuple(r,y,convergQ);
+}
+
+tuple<VD, VD, VD, double> integrateAndSaveProfile(VD R, VD y0, double dr, double epsfrac, double epsabs, double drmin)
+{
+    int N = R.size();
+    double r0 = R[0];
+    VVD Yout(N,VD(y0.size(),0));
+    Yout[0] = y0;
+    
 }
