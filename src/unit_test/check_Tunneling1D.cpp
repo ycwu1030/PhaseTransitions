@@ -48,6 +48,7 @@ int main(int argc, char const *argv[])
     double Rerr;
     tie(R,Phi,dPhi,Rerr) = solver_thin.findProfile();
     ofstream output("Thin_Profile.dat");
+    output<<"R\tPhi\tdPhi"<<endl;
     for (size_t i = 0; i < R.size(); i++)
     {
         output << R[i] << "\t" << Phi[i] << "\t" << dPhi[i] << endl;
@@ -56,6 +57,7 @@ int main(int argc, char const *argv[])
     Tunneling1D solver_thick(1.0,0.0,Vthick,dVthick,d2Vthick);
     tie(R,Phi,dPhi,Rerr) = solver_thick.findProfile();
     ofstream output1("Thick_Profile.dat");
+    output1<<"R\tPhi\tdPhi"<<endl;
     for (size_t i = 0; i < R.size(); i++)
     {
         output1 << R[i] << "\t" << Phi[i] << "\t" << dPhi[i] << endl;
