@@ -19,7 +19,8 @@ typedef VVD (*HM)(VD,double);
 typedef bool (*forbidCrit)(VD);
 
 inline bool AllPass(VD x){return false;}
-std::vector<double> abs(const vector<double> &input);
+std::vector<double> abs(const std::vector<double> &input);
+std::vector<double> pow(const std::vector<double> &input, double power);
 
 std::vector<double> operator+(const std::vector<double> &lhs, const std::vector<double> &rhs);
 std::vector<double> operator+(const std::vector<double> &lhs, const double &cons);
@@ -40,5 +41,7 @@ VD operator/(const VD &lhs, const double &s);
 std::ostream& operator<<(std::ostream& out, const VD& s);
 
 VVD operator/(const VVD &lhs, const double &s);
+
+double Simpson(VD X, VD Y);
 
 #endif

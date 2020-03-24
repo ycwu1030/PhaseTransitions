@@ -3,6 +3,7 @@
 
 #include "VTypes.h"
 #include "RungeKutta.h"
+#include <cmath>
 #include <tuple>
 
 enum CONVERGENCETYPE
@@ -41,7 +42,7 @@ private:
     std::tuple<VD, VD, VD, double> integrateAndSaveProfile(VD R, VD y0, double dr, double epsfrac, double epsabs, double drmin);
 
 public:
-    Tunneling1D();
+    Tunneling1D(double absMin, double metaMin, ScalarFunction V_, dScalarFunction dV_, HM d2V_, double dim = 3, double phi_eps_rel_ = 1e-3);
     ~Tunneling1D(){};
 
     void SetMinima(double absMin, double metaMin);
@@ -58,6 +59,9 @@ public:
     std::tuple<double, double> exactSolution(double r, double phi0, double dV, double d2V);
 
     VD equationOfMotion(double r, VD y);
+
+    std::tuple<VD,VD,VD,double> findProfile(double xguess=NAN,double xtol=1e-4,double phitol=1e-4,double thinCutoff=0.01,int npoints=500,double rmin=1e-4, double rmax=1e4, int max_interior_pts = -1);
+    double findAction(VD R, VD Phi, VD dPhi);
 };
 
 
