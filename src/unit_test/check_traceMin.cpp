@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-30 20:37:46
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-22 19:02:38
+ * @LastEditTime : 2020-03-24 11:51:30
  */
 #include "TraceMin.h"
 #include "Phases.h"
@@ -12,8 +12,9 @@
 
 using namespace std;
 
-double Potential(VD X, double T)
+double Potential(VD X, void *param)
 {
+    double T = *((double *)param);
     double mu2h = -pow(120,2);
     double mu2s = -pow(230,2);
     double lamh = 1.4;
@@ -31,8 +32,9 @@ double Potential(VD X, double T)
     res += lamhs*pow(h*s,2);
     return res;
 }
-VD dPotential_dX(VD X, double T)
+VD dPotential_dX(VD X, void *param)
 {
+    double T = *((double *)param);
     double mu2h = -pow(120,2);
     double mu2s = -pow(230,2);
     double lamh = 1.4;
@@ -47,8 +49,9 @@ VD dPotential_dX(VD X, double T)
     res[1] = (mu2s + cs*T*T)*s*2 + 4*lams*pow(s,3) + 2*lamhs*s*h*h;
     return res;
 }
-VD d2Potential_dXdT(VD X, double T)
+VD d2Potential_dXdT(VD X, void *param)
 {
+    double T = *((double *)param);
     double mu2h = -pow(120,2);
     double mu2s = -pow(230,2);
     double lamh = 1.4;
@@ -63,8 +66,9 @@ VD d2Potential_dXdT(VD X, double T)
     res[1] = 4*cs*T*s;
     return res;
 }
-VVD d2Potential_dX2(VD X, double T)
+VVD d2Potential_dX2(VD X, void *param)
 {
+    double T = *((double *)param);
     double mu2h = -pow(120,2);
     double mu2s = -pow(230,2);
     double lamh = 1.4;

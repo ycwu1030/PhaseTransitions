@@ -112,9 +112,10 @@ void Tunneling1D::SetPrecision(double eps_rel)
 double Tunneling1D::dV_from_absMin(double delta_phi)
 {
     double phi = phi_absMin + delta_phi;
-    double dV_f = dV({phi},0)[0];
+    double T = 0;
+    double dV_f = dV({phi},&T)[0];
 
-    double dV_d = d2V({phi},0)[0][0] * delta_phi;
+    double dV_d = d2V({phi},&T)[0][0] * delta_phi;
 
     double blend_factor = exp(-pow(delta_phi/phi_eps_abs,2));
 
@@ -123,7 +124,8 @@ double Tunneling1D::dV_from_absMin(double delta_phi)
 double Tunneling1D::findBarrierLocation()
 {
     double phi_tol = abs(phi_absMin-phi_metaMin)*1e-12;
-    double V_meta = V({phi_metaMin},0);
+    double T = 0;
+    double V_meta = V({phi_metaMin},&T);
     double phiH = phi_metaMin;
     double phiL = phi_absMin;
     double phiM = (phiH + phiL)/2;
@@ -131,7 +133,7 @@ double Tunneling1D::findBarrierLocation()
     double V0;
     while (abs(phiH-phiL) > phi_tol)
     {
-        V0 = V({phiM},0);
+        V0 = V({phiM},&T);
         if (V0 > V_meta)
         {
             phiH = phiM;
@@ -275,9 +277,10 @@ tuple<double, double, double> Tunneling1D::initialConditions(double delta_phi0, 
     * If there is no such value, it returns the intial conditions at `rmin`.
     */
    
+    double T = 0;
     double phi0 = phi_absMin + delta_phi0;
     double dV0 = dV_from_absMin(delta_phi0);
-    double d2V0 = d2V({phi0},0)[0][0];
+    double d2V0 = d2V({phi0},&T)[0][0];
 
     double phi_rmin, dphi_rmin;
     std::tie(phi_rmin, dphi_rmin) = exactSolution(rmin, phi0, dV0, d2V0);
@@ -314,8 +317,9 @@ tuple<double, double, double> Tunneling1D::initialConditions(double delta_phi0, 
 VD Tunneling1D::equationOfMotion(double r, VD y)
 {
     VD res(2);
+    double T = 0;
     res[0] = y[1];
-    res[1] = dV({y[0]},0)[0]-alpha*y[1]/r;
+    res[1] = dV({y[0]},&T)[0]-alpha*y[1]/r;
     return res;
 }
 struct cubic_param
@@ -618,14 +622,15 @@ double Tunneling1D::findAction(VD R, VD Phi, VD dPhi)
     double Sphere_area = pow(M_PI,Spatial_Dim/2.0)/tgamma(Spatial_Dim/2.0);
     VD area = pow(R,alpha)*Sphere_area;
     VD integrand(N);
+    double T = 0;
     for (size_t i = 0; i < N; i++)
     {
-        integrand[i] = (pow(dPhi[i],2)/2 + V({Phi[i]},0) - V({phi_metaMin},0))*area[i];
+        integrand[i] = (pow(dPhi[i],2)/2 + V({Phi[i]},&T) - V({phi_metaMin},&T))*area[i];
     }
     double S = Simpson(R,integrand);
 
     // For the bulk inside the bubble interior
     double volume = pow(R[0],Spatial_Dim)*pow(M_PI,Spatial_Dim/2.0)/tgamma(Spatial_Dim/2.0+1.0);
-    S += volume*(V({Phi[0]},0)-V({phi_metaMin},0));
+    S += volume*(V({Phi[0]},&T)-V({phi_metaMin},&T));
     return S;
 }

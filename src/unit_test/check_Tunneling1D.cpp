@@ -4,34 +4,34 @@
 
 using namespace std;
 
-double Vthin(VD Phi, double T)
+double Vthin(VD Phi, void *param)
 {
     double phi = Phi[0];
     return 0.25*pow(phi,4) - 0.49*pow(phi,3) + 0.235*pow(phi,2);
 }
-VD dVthin(VD Phi, double T)
+VD dVthin(VD Phi, void *param)
 {
     double phi = Phi[0];
     return {pow(phi,3) - 3*0.49*pow(phi,2) + 0.47*phi};
 }
-VVD d2Vthin(VD Phi, double T)
+VVD d2Vthin(VD Phi, void *param)
 {
     double phi = Phi[0];
     VVD res(1,VD(1,0));
     res[0][0] = 3*pow(phi,2) - 2*3*0.49*phi + 0.47;
     return res;
 }
-double Vthick(VD Phi, double T)
+double Vthick(VD Phi, void *param)
 {
     double phi = Phi[0];
     return 0.25*pow(phi,4) - 0.4*pow(phi,3) + 0.1*pow(phi,2);
 }
-VD dVthick(VD Phi, double T)
+VD dVthick(VD Phi, void *param)
 {
     double phi = Phi[0];
     return {pow(phi,3) - 1.2*pow(phi,2) + 0.2*phi};
 }
-VVD d2Vthick(VD Phi, double T)
+VVD d2Vthick(VD Phi, void *param)
 {
     double phi = Phi[0];
     VVD res(1,VD(1,0));

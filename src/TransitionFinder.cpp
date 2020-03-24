@@ -21,8 +21,8 @@ struct minipara
 double Vcrit_wrap(double T, void *param)
 {
     minipara *par = (minipara*)param;
-    double v1 = (par->f)((par->ph1).valAt(T),T);
-    double v2 = (par->f)((par->ph2).valAt(T),T);
+    double v1 = (par->f)((par->ph1).valAt(T),&T);
+    double v2 = (par->f)((par->ph2).valAt(T),&T);
     return v1-v2;
 }
 
@@ -79,11 +79,11 @@ VTC findCriticalTemperatures(MP phases, ScalarFunction f)
             }
 
             // For 1-st order PT, just consider phase1->phase2
-            if (f(phase1.valAt(tmin),tmin)-f(phase2.valAt(tmin),tmin) < 0)
+            if (f(phase1.valAt(tmin),&tmin)-f(phase2.valAt(tmin),&tmin) < 0)
             {
                 continue;
             }
-            if (f(phase1.valAt(tmax),tmax)-f(phase2.valAt(tmax),tmax) > 0)
+            if (f(phase1.valAt(tmax),&tmax)-f(phase2.valAt(tmax),&tmax) > 0)
             {
                 continue;
             }

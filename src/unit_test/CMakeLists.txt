@@ -9,6 +9,7 @@ add_executable(TcTest check_findTc.cpp)
 add_executable(MemTest check_MemeryUsage.cpp)
 add_executable(LocalTest check_ApproxLocalMin.cpp)
 add_executable(Tunnel1D check_Tunneling1D.cpp)
+add_executable(functiontest check_functional.cpp)
 
 
 target_link_libraries(HermiteInterpolationTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})

@@ -4,6 +4,7 @@
 #include <map>
 #include <tuple>
 #include <set>
+#include <functional>
 #include <iostream>
 
 class Phase;
@@ -13,10 +14,14 @@ typedef std::set<int> SI;
 typedef std::map<int, Phase> MP;
 typedef std::vector<std::tuple<VD, double> > VT;
 typedef std::vector<std::tuple<double, double, VD, int> > VnT;
-typedef double (*ScalarFunction)(VD,double);
-typedef VD (*dScalarFunction)(VD,double);
-typedef VVD (*HM)(VD,double);
-typedef bool (*forbidCrit)(VD);
+typedef std::function<double(VD,void*)> ScalarFunction;
+typedef std::function<VD(VD,void*)> dScalarFunction;
+typedef std::function<VVD(VD,void*)> HM;
+typedef std::function<bool(VD)> forbidCrit;
+// typedef double (*ScalarFunction)(VD,double);
+// typedef VD (*dScalarFunction)(VD,double);
+// typedef VVD (*HM)(VD,double);
+// typedef bool (*forbidCrit)(VD);
 
 inline bool AllPass(VD x){return false;}
 std::vector<double> abs(const std::vector<double> &input);

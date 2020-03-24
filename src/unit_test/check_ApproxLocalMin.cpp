@@ -3,7 +3,7 @@
  * @Author       : Yongcheng Wu
  * @Date         : 2019-12-31 12:49:52
  * @LastEditors  : Yongcheng Wu
- * @LastEditTime : 2020-01-03 10:06:38
+ * @LastEditTime : 2020-03-24 11:47:34
  */
 
 #include "TraceMin.h"
@@ -13,7 +13,7 @@
 
 using namespace std;
 
-double Potential(VD X, double T)
+double Potential(VD X, void *T)
 {
     double h = X[0];
     double s = X[1];
