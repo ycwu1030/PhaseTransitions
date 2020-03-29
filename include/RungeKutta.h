@@ -37,6 +37,7 @@ public:
 
     void _RKQC_SingleStep(double &X, VD &Y, VD dY, double step_size_guess, double eps, VD Y_Scale, double &step_size_did, double &step_size_further); // This is the Runge-Kutta method with quality controlled, which will achieve 5-th order accuracy. (adaptive stepsize)
     void ODEINTEGRAL(double step_start, double eps=1e-6);
+    VVD ODEINTEGRAL(VD X, VD Y0, double step_start, double eps=1e-6);
 
     void PrintSolution();
     void DumpSolution(std::string filename);

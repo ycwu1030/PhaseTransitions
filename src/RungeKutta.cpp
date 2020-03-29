@@ -56,16 +56,16 @@ void RungeKutta::_RK4_SingleStep(double X_CUR, VD Y_CUR, VD dY_CUR, double step_
 {
     double half_step = step_size/2;
 
-// The first step, just use the current dY/dX 
+    // The first step, just use the current dY/dX 
     VD dY_Step1 = step_size*dY_CUR;
 
-// The second step, half_step in x, half dY_Step1 in Y
+    // The second step, half_step in x, half dY_Step1 in Y
     VD dY_Step2 = step_size*_derivs(X_CUR+half_step,Y_CUR+dY_Step1/2,_param);
 
-// The third step, half_step in x, half dY_Step2 in Y
+    // The third step, half_step in x, half dY_Step2 in Y
     VD dY_Step3 = step_size*_derivs(X_CUR+half_step,Y_CUR+dY_Step2/2,_param);
 
-// The fourth step, full step in x, full dY_Step3 in Y
+    // The fourth step, full step in x, full dY_Step3 in Y
     VD dY_Step4 = step_size*_derivs(X_CUR+step_size,Y_CUR+dY_Step3,_param);
     
     Y_NEXT = Y_CUR + dY_Step1/6 + dY_Step2/3 + dY_Step3/3 + dY_Step4/6;
@@ -170,7 +170,19 @@ void RungeKutta::ODEINTEGRAL(double step_start,double eps)
     }
     cout<<"TAKE TOO MANY STEPS"<<endl;
 }
-
+VVD RungeKutta::ODEINTEGRAL(VD X, VD Y0, double step_start, double eps)
+{
+    _RESET();
+    VVD Y_res(X.size());
+    Y_res[0] = Y0;
+    for (int i = 1; i < X.size(); i++)
+    {
+        SetBound(X[i-1],X[i],Y_res[i-1]);
+        ODEINTEGRAL(abs(step_start*(X[i]-X[i-1])),eps);
+        Y_res[i] = _Y.back();
+    }
+    return Y_res;
+}
 void RungeKutta::PrintSolution()
 {
     cout<<"The Solution is:"<<endl;

@@ -10,7 +10,9 @@ add_executable(MemTest check_MemeryUsage.cpp)
 add_executable(LocalTest check_ApproxLocalMin.cpp)
 add_executable(Tunnel1D check_Tunneling1D.cpp)
 add_executable(functiontest check_functional.cpp)
-
+add_executable(BSplineGSL check_BSpline_GSL.cpp)
+add_executable(SplineInterGSL check_Spline_inter_GSL.cpp)
+add_executable(SplineInterPot check_Spline_inter_potential.cpp)
 
 target_link_libraries(HermiteInterpolationTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})
 target_link_libraries(PhaseTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})
@@ -20,6 +22,9 @@ target_link_libraries(TcTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransiti
 target_link_libraries(MemTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})
 target_link_libraries(LocalTest ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})
 target_link_libraries(Tunnel1D ${GSL_LIBRARIES} ${Boost_LIBRARIES} ${PhaseTransition_LIBRARIES})
+target_link_libraries(BSplineGSL ${GSL_LIBRARIES})
+target_link_libraries(SplineInterGSL ${GSL_LIBRARIES} ${PhaseTransition_LIBRARIES})
+target_link_libraries(SplineInterPot ${GSL_LIBRARIES} ${PhaseTransition_LIBRARIES})
 
 # install(TARGETS HermiteInterpolationTest DESTINATION ${PROJECT_BINARY_DIR}/bin)
 # install(TARGETS PhaseTest DESTINATION ${PROJECT_BINARY_DIR}/bin)

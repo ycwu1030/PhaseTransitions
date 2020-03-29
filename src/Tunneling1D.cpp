@@ -1,47 +1,48 @@
 #include "Tunneling1D.h"
 #include <cmath>
 #include <iostream>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_min.h>
-#include <gsl/gsl_roots.h>
+// #include <gsl/gsl_errno.h>
+// #include <gsl/gsl_min.h>
+// #include <gsl/gsl_roots.h>
+#include "GSL_Wraper.h"
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/special_functions/bessel.hpp>
 
 using namespace std;
 using namespace boost::math;
 
-typedef double (*root_func)(double,void*);
-double find_root_gsl_wraper(root_func func, void *params, double x_max, double x_min)
-{
-    int status;
-    int iter = 0, max_iter = 100;
-    const gsl_root_fsolver_type *T = gsl_root_fsolver_brent;
-    gsl_root_fsolver *s = gsl_root_fsolver_alloc(T);
-    double r;
-    double r_min = x_min;
-    double r_max = x_max;
+// typedef double (*root_func)(double,void*);
+// double find_root_gsl_wraper(root_func func, void *params, double x_max, double x_min)
+// {
+//     int status;
+//     int iter = 0, max_iter = 100;
+//     const gsl_root_fsolver_type *T = gsl_root_fsolver_brent;
+//     gsl_root_fsolver *s = gsl_root_fsolver_alloc(T);
+//     double r;
+//     double r_min = x_min;
+//     double r_max = x_max;
 
-    gsl_function F;
-    // struct param_initialConditions params = {this, phi0, dV0, d2V0, phi_absMin, delta_phi_cutoff};
+//     gsl_function F;
+//     // struct param_initialConditions params = {this, phi0, dV0, d2V0, phi_absMin, delta_phi_cutoff};
 
-    F.function = func;
-    F.params = params;
+//     F.function = func;
+//     F.params = params;
 
-    gsl_root_fsolver_set(s, &F, r_min, r_max);
+//     gsl_root_fsolver_set(s, &F, r_min, r_max);
 
-    do
-    {
-        iter++;
-        status = gsl_root_fsolver_iterate(s);
-        r      = gsl_root_fsolver_root(s);
-        r_min  = gsl_root_fsolver_x_lower(s);
-        r_max  = gsl_root_fsolver_x_upper(s);
-        status = gsl_root_test_interval(r_min,r_max,1e-8,1e-10);
-    } while (status == GSL_CONTINUE && iter < max_iter);
+//     do
+//     {
+//         iter++;
+//         status = gsl_root_fsolver_iterate(s);
+//         r      = gsl_root_fsolver_root(s);
+//         r_min  = gsl_root_fsolver_x_lower(s);
+//         r_max  = gsl_root_fsolver_x_upper(s);
+//         status = gsl_root_test_interval(r_min,r_max,1e-8,1e-10);
+//     } while (status == GSL_CONTINUE && iter < max_iter);
     
-    gsl_root_fsolver_free(s);
-    return r;
-}
+//     gsl_root_fsolver_free(s);
+//     return r;
+// }
 
 VD func_for_rkqc(double r, VD y, void *param)
 {
@@ -158,33 +159,7 @@ double Tunneling1D::findRScale()
     double x1 = min(phi_bar,phi_metaMin);
     double x2 = max(phi_bar,phi_metaMin);
 
-    int status;
-    int iter = 0, max_iter = 100;
-    const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
-    gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
-
-    double low = x1, high = x2;
-    double pred = (low + high)/2;
-
-    gsl_function F;
-    F.function = &func_for_findRScale;
-    F.params = this;
-
-    gsl_min_fminimizer_set(s, &F, pred, low, high);
-
-    do
-    {
-        iter++;
-        status = gsl_min_fminimizer_iterate(s);
-        pred = gsl_min_fminimizer_x_minimum(s);
-        low = gsl_min_fminimizer_x_lower(s);
-        high = gsl_min_fminimizer_x_upper(s);
-
-        status = gsl_min_test_interval(low,high,phi_tol,0);
-    } while (status == GSL_CONTINUE && iter < max_iter);
-    
-    double phi_bar_top = pred;
-    gsl_min_fminimizer_free(s);
+    double phi_bar_top = find_min_arg_gsl_wraper(func_for_findRScale,this,x2,x1,phi_tol);
 
     if (phi_bar_top + phi_tol > x2 || phi_bar_top - phi_tol < x1)
     {
