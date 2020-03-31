@@ -122,6 +122,24 @@ vector<double> operator/(const vector<double> &lhs, const vector<double> &rhs)
     }
     return res;
 }
+VVD operator*(const VVD &lhs, const double &s)
+{
+    VVD res;
+    for (size_t i = 0; i < lhs.size(); i++)
+    {
+        res.push_back(lhs[i]*s);
+    }
+    return res;
+}
+VVD operator*(const double &s, const VVD &rhs)
+{
+    VVD res;
+    for (size_t i = 0; i < rhs.size(); i++)
+    {
+        res.push_back(rhs[i]*s);
+    }
+    return res;
+}
 VVD operator/(const VVD &lhs, const double &s)
 {
     VVD res;
@@ -131,7 +149,24 @@ VVD operator/(const VVD &lhs, const double &s)
     }
     return res;
 }
-
+VVD operator+(const VVD &lhs, const VVD &rhs)
+{
+    VVD res;
+    for (size_t i = 0; i < lhs.size(); i++)
+    {
+        res.push_back(lhs[i]+rhs[i]);
+    }
+    return res;
+}
+VVD operator-(const VVD &lhs, const VVD &rhs)
+{
+    VVD res;
+    for (size_t i = 0; i < lhs.size(); i++)
+    {
+        res.push_back(lhs[i]-rhs[i]);
+    }
+    return res;
+}
 ostream& operator<<(ostream& out, const VD& s)
 {
     for (size_t i = 0; i < s.size()-1; i++)

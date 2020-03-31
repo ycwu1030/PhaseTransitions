@@ -47,8 +47,11 @@ VD operator/(const VD &lhs, const double &s);
 
 std::ostream& operator<<(std::ostream& out, const VD& s);
 
+VVD operator*(const VVD &lhs, const double &s);
+VVD operator*(const double &s, const VVD &rhs);
 VVD operator/(const VVD &lhs, const double &s);
-
+VVD operator+(const VVD &lhs, const VVD &rhs);
+VVD operator-(const VVD &lhs, const VVD &rhs);
 VD operator*(const VVD &lhs, const VVD &rhs);
 
 double Simpson(VD X, VD Y);

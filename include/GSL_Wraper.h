@@ -6,6 +6,8 @@
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_bspline.h>
+#include <gsl/gsl_multifit.h>
 #include "VTypes.h"
 
 typedef double (*root_func)(double,void*);
@@ -18,14 +20,38 @@ class GSL_BSpline_Fit
 {
 private:
     VVD _Y;
+    VVD _Y_transposed;
     VD _X;
+    int _NFields;
 
     int _K;
     int _NCOEFFS;
-    int _NBREAKS;  
+    int _NBREAKS;
+    int _NDataPoints;  
+
+    gsl_bspline_workspace *_bw = nullptr;
+    gsl_multifit_linear_workspace *_mw = nullptr;
+
+    gsl_vector* _B = nullptr; // Store the coefficients at each x;
+    gsl_matrix* _dB = nullptr; // Store the coefficients at each x
+    gsl_matrix* _XC = nullptr; // Store the coefficients at all x, which then will be used for fitting
+    std::vector<gsl_vector*> _Cs; // The coefficient from fitting
+    // gsl_vector *_Weight; // The weight in fitting
+    std::vector<gsl_matrix*> _COVs; // The covariant matrix
+
+    void Fitting();
+
 public:
+    GSL_BSpline_Fit(int k, int ncoeffs);
     GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs);
     ~GSL_BSpline_Fit();
+
+    void SetDataX(VD X);
+    void UpdateDataY(VVD Y);
+    VD valAt(double x);
+    VVD valAt(VD X);
+    std::tuple<VD,VD> derivAt(double x); // first and second derivative;
+    std::tuple<VVD,VVD> derivAt(VD X);
 };
 
 class GSL_Spline_Inter
@@ -51,6 +77,7 @@ public:
 
     void SetData(VD *Y, VD *X);
     double valAt(double x,int deri = 0);
+    VD valAt(VD X);
 
 };
 

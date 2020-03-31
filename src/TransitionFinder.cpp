@@ -1,4 +1,5 @@
 #include "TransitionFinder.h"
+#include "Tunneling1D.h"
 #include <tuple>
 #include <functional>
 #include <algorithm>
@@ -136,5 +137,74 @@ TransCritical secondOrderTrans(Phase high_phase, Phase low_phase, TempType Ttype
     res.high_phase = high_phase.GetKey();
     res.tranorder = 2;
     res.trantype = Ttype;
+    return res;
+}
+
+TransNucleation fullTunneling(VVD pts_init, ScalarFunction V_in, dScalarFunction dV_in, double T, int maxiter, double fixEndCutoff, bool save_all_steps,int V_spline_samples)
+{
+    vector<VVD> saved_steps;
+    VVD pts = pts_init;
+    VD R;
+    VD Phi_1D,phi;
+    VD dPhi_1D,dphi;
+    double Rerr;
+    Deformation_Status deform_info;
+    for (size_t num_iter = 0; num_iter < maxiter; num_iter++)
+    {
+        // cout<<"Starting tunneling step-"<<num_iter+1<<endl;
+        // * 1. Interpolate the path by spline
+        SplinePath path(pts,V_in,T,V_spline_samples,true);
+        // cout<<"\tGot the spline path"<<endl;
+        // for (double s = 0; s <= path.GetDistance(); s+= 0.01*path.GetDistance())
+        // {
+        //     cout<<"\t"<<s<<"\t"<<path.pts_at_dist(s)<<"\t"<<path.V({s},nullptr)<<"\t"<<path.dV({s},nullptr)[0]<<endl;
+        // }
+        // double s = path.GetDistance();
+        // cout<<"\t"<<s<<"\t"<<path.pts_at_dist(s)<<"\t"<<path.V({s},nullptr)<<"\t"<<path.dV({s},nullptr)[0]<<endl;
+        
+        // * 2. Peform 1-D tunneling along the above path;
+        Tunneling1D tunnel1D(0.0,path.GetDistance(),path.V,path.dV,path.d2V);
+        // cout<<"\tTry to find 1D profile"<<endl;
+        tie(R,Phi_1D,dPhi_1D,Rerr) = tunnel1D.findProfile();
+        phi = Phi_1D;
+        dphi = dPhi_1D;
+        tie(phi,dphi) = tunnel1D.evenlySpacedPhi(phi,dphi,phi.size(),1,false);
+        // cout<<"\tGot 1D tunneling results"<<endl;
+
+        dphi.front() = 0;
+        dphi.back() = 0;
+
+        // * 3. Deform the path
+        pts = path.pts_at_dist(phi);
+        Deformation_Spline deform(pts,dphi,dV_in);
+        deform_info = deform.deformPath();
+        pts = deform.GetPhi();
+        // cout<<"\tPath deformed"<<endl;
+        // temporally ignore saving the steps
+
+        // * 4. Check convergence
+        // * If deformation converged after one step, then we can assume that the path is good.
+        // * We don't allow more steps, since during deformPath() we didn't re-calculate the 1D tunneling profile. With more steps, the convergence status should be recalculated.
+        if (deform_info == DF_CONVERGED && deform.GetSteps() < 2)
+        {
+            break;
+        }
+    }
+    Deformation_Spline deform(pts,dphi,dV_in);
+    VVD F, Gradient;
+    tie(F,Gradient) = deform.forces();
+    VD F_mag = pow(F*F,0.5);
+    VD Grad_mag = pow(Gradient*Gradient,0.5);
+    double F_mag_max = *max_element(F_mag.begin(),F_mag.end());
+    double Grad_mag_max = *max_element(Grad_mag.begin(),Grad_mag.end());
+    double fRatio = F_mag_max/Grad_mag_max;
+
+    SplinePath path_final(pts,V_in,T,V_spline_samples,true);
+    VVD Phi = path_final.pts_at_dist(Phi_1D);
+
+    Tunneling1D tunnel1D_final(0.0,path_final.GetDistance(),path_final.V,path_final.dV,path_final.d2V);
+    double action = tunnel1D_final.findAction(R,Phi_1D,dPhi_1D);
+
+    TransNucleation res = {R,Phi_1D,dPhi_1D,Phi,action,fRatio};
     return res;
 }

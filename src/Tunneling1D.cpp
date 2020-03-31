@@ -62,8 +62,10 @@ Tunneling1D::Tunneling1D(double absMin, double metaMin, ScalarFunction V_, dScal
     phi_absMin = absMin;
     phi_metaMin = metaMin;
     phi_bar = findBarrierLocation();
+    // cout<<"Barrier at "<<phi_bar<<endl;
 
     rscale = findRScale();
+    // cout<<"r-scale: "<<rscale<<endl;
 
     Spatial_Dim = dim;
     alpha = dim-1;
@@ -182,7 +184,7 @@ tuple<double, double> Tunneling1D::exactSolution(double r, double phi0, double d
     // ! Find phi(r) (and dphi(r)) given phi(0) assuming a quadractic potential
     double beta = sqrt(abs(d2V_));
     double beta_r = beta*r;
-    double nu = (alpha - 1)/2;
+    double nu = (alpha - 1.0)/2.0;
 
     double phi = 0;
     double dphi = 0;
@@ -203,11 +205,22 @@ tuple<double, double> Tunneling1D::exactSolution(double r, double phi0, double d
     }
     else if (d2V_ > 0)
     {
-        phi = (tgamma(nu+1)/pow(beta_r/2,nu)*cyl_bessel_i(nu,beta_r)-1)*dV_/d2V_;
-        dphi = -nu/r/pow(beta_r/2,nu)*cyl_bessel_i(nu,beta_r);
-        dphi += beta/2/pow(beta_r/2,nu)*(cyl_bessel_i(nu-1,beta_r)+cyl_bessel_i(nu+1,beta_r));
-        dphi *= tgamma(nu+1)*dV_/d2V_;
-        phi += phi0;
+        // cout<<"beta_r: "<<beta_r<<endl;
+        try
+        {
+            phi = (tgamma(nu+1)/pow(beta_r/2,nu)*cyl_bessel_i(nu,beta_r)-1)*dV_/d2V_;
+            dphi = -nu/r/pow(beta_r/2,nu)*cyl_bessel_i(nu,beta_r);
+            dphi += beta/2/pow(beta_r/2,nu)*(cyl_bessel_i(nu-1,beta_r)+cyl_bessel_i(nu+1,beta_r));
+            dphi *= tgamma(nu+1)*dV_/d2V_;
+            phi += phi0;
+        }
+        catch(const boost::wrapexcept<std::overflow_error>& e)
+        {
+            // std::cerr << e.what() << '\n';
+            // just ignore the overflow
+            phi = INFINITY;
+            dphi = INFINITY;
+        }
     }
     else
     {
@@ -272,19 +285,28 @@ tuple<double, double, double> Tunneling1D::initialConditions(double delta_phi0, 
     double r_last = rmin;
 
     double phi, dphi;
-
+    r_last = r_cur;
+    r_cur *= 10;
     while (std::isfinite(r_cur))
     {
-        r_last = r_cur;
-        r_cur *= 10;
         std::tie(phi, dphi) = exactSolution(r_cur, phi0, dV0, d2V0);
+        if (!std::isfinite(phi))
+        {
+            r_cur = (r_last + r_cur)/2.0;
+            continue;
+        }
         if (abs(phi - phi_absMin) > abs(delta_phi_cutoff))
         {
             break;
         }
+        r_last = r_cur;
+        r_cur *= 10;
     }
     struct param_initialConditions params = {this, phi0, dV0, d2V0, phi_absMin, delta_phi_cutoff};
+    // cout<<"Before root finding"<<endl;
+    // cout<<"r_cur="<<r_cur<<" r_last="<<r_last<<endl;
     double r = find_root_gsl_wraper(&func_for_initialConditions,&params,r_cur,r_last);
+    // cout<<"After root finding"<<endl;
 
     std::tie(phi,dphi) = exactSolution(r,phi0,dV0,d2V0);
     return make_tuple(r,phi,dphi);    
@@ -608,4 +630,43 @@ double Tunneling1D::findAction(VD R, VD Phi, VD dPhi)
     double volume = pow(R[0],Spatial_Dim)*pow(M_PI,Spatial_Dim/2.0)/tgamma(Spatial_Dim/2.0+1.0);
     S += volume*(V({Phi[0]},&T)-V({phi_metaMin},&T));
     return S;
+}
+std::tuple<VD, VD> Tunneling1D::evenlySpacedPhi(VD phi, VD dphi, int npoint, int k, bool fixAbs)
+{
+    if (fixAbs)
+    {
+        phi.insert(phi.begin(),phi_absMin);
+        phi.insert(phi.end(),phi_metaMin);
+        dphi.insert(dphi.begin(),0.0);
+        dphi.insert(dphi.end(),0.0);
+    }
+    else
+    {
+        phi.insert(phi.end(),phi_metaMin);
+        dphi.insert(dphi.end(),0.0);
+    }
+    
+    // Sort phi in increasing order
+    VVD fullPhi = transpose({phi,dphi});
+    // cout<<"fullPhi dim: ("<<fullPhi.size()<<","<<fullPhi[0].size()<<")"<<endl;
+    sort(fullPhi.begin(),fullPhi.end(),[](VD x1, VD x2){return x1[0]<x2[0];});
+    VVD::iterator iter = unique(fullPhi.begin(),fullPhi.end(),[](VD x1, VD x2){return x1[0]==x2[0];});
+    fullPhi.resize(distance(fullPhi.begin(),iter));
+    fullPhi=transpose(fullPhi);
+    // cout<<fullPhi[0]<<endl;
+
+    GSL_Spline_Inter inter;
+    inter.SetData(&fullPhi[1],&fullPhi[0]);
+
+    VD p;
+    if (fixAbs)
+    {
+        p = linspace(phi_absMin,phi_metaMin,npoint);
+    }
+    else
+    {
+        p = linspace(phi[0],phi_metaMin,npoint);
+    }
+
+    return make_tuple(p,inter.valAt(p));
 }

@@ -62,6 +62,7 @@ public:
 
     std::tuple<VD,VD,VD,double> findProfile(double xguess=NAN,double xtol=1e-4,double phitol=1e-4,double thinCutoff=0.01,int npoints=500,double rmin=1e-4, double rmax=1e4, int max_interior_pts = -1);
     double findAction(VD R, VD Phi, VD dPhi);
+    std::tuple<VD, VD> evenlySpacedPhi(VD phi, VD dphi, int npoint = 100, int k = 1, bool fixAbs = true);
 };
 
 

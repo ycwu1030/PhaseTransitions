@@ -1,5 +1,6 @@
 #include "GSL_Wraper.h"
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -212,6 +213,15 @@ double GSL_Spline_Inter::valAt(double xi, int deri)
     }
     return res;
 }
+VD GSL_Spline_Inter::valAt(VD X)
+{
+    VD res;
+    for (size_t i = 0; i < X.size(); i++)
+    {
+        res.push_back(valAt(X[i]));
+    }
+    return res;
+}
 
 GSL_Multi_Spline_Inter::GSL_Multi_Spline_Inter()
 {
@@ -326,4 +336,151 @@ VD GSL_Multi_Spline_Inter::valAt(double xi, int deri)
         res = _ymax + (_ymax - res);
     }
     return res;
+}
+GSL_BSpline_Fit::GSL_BSpline_Fit(int k, int ncoeffs)
+{
+    _K = k;
+    _NCOEFFS = ncoeffs;
+    _NBREAKS = _NCOEFFS + 2 - _K;
+
+    _bw = gsl_bspline_alloc(_K,_NBREAKS);
+    _B = gsl_vector_alloc(_NCOEFFS);
+    _dB = gsl_matrix_alloc(_NCOEFFS,3);
+}
+GSL_BSpline_Fit::GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs)
+{
+    _K = k;
+    _NCOEFFS = ncoeffs;
+    _NBREAKS = _NCOEFFS + 2 - _K;
+
+    _bw = gsl_bspline_alloc(_K,_NBREAKS);
+    _B = gsl_vector_alloc(_NCOEFFS);
+    _dB = gsl_matrix_alloc(_NCOEFFS,3);
+
+    SetDataX(X);
+    UpdateDataY(Y);
+}
+GSL_BSpline_Fit::~GSL_BSpline_Fit()
+{
+    gsl_bspline_free(_bw);
+    gsl_vector_free(_B);
+    gsl_matrix_free(_dB);
+    if(!_XC) gsl_matrix_free(_XC);
+    if(!_mw) gsl_multifit_linear_free(_mw);
+    for (size_t i = 0; i < _Cs.size(); i++)
+    {
+        gsl_vector_free(_Cs[i]);
+    }
+    _Cs.clear();
+    for (size_t i = 0; i < _COVs.size(); i++)
+    {
+        gsl_matrix_free(_COVs[i]);
+    }
+    _COVs.clear();
+}
+void GSL_BSpline_Fit::SetDataX(VD X)
+{
+    _X = X;
+    _NDataPoints = X.size();
+    if (!_XC)
+    {
+        gsl_matrix_free(_XC);
+    }
+    _XC = gsl_matrix_alloc(_NDataPoints,_NCOEFFS);
+
+    auto res = minmax_element(_X.begin(),_X.end());
+    // cout<<"min: "<<*res.first<<"  max: "<<*res.second<<endl;
+    gsl_bspline_knots_uniform(*res.first,*res.second,_bw);
+
+    for (size_t i = 0; i < _NDataPoints; i++)
+    {
+        gsl_bspline_eval(_X[i],_B,_bw);
+        for (size_t j = 0; j < _NCOEFFS; j++)
+        {
+            gsl_matrix_set(_XC,i,j,gsl_vector_get(_B,j));
+        }
+    }
+    if (!_mw)
+    {
+        gsl_multifit_linear_free(_mw);
+    }
+    _mw = gsl_multifit_linear_alloc(_NDataPoints,_NCOEFFS);
+}
+void GSL_BSpline_Fit::UpdateDataY(VVD Y)
+{
+    _Y = Y;
+    _Y_transposed = transpose(Y);
+    _NFields = _Y_transposed.size();
+
+    for (size_t i = 0; i < _Cs.size(); i++)
+    {
+        gsl_vector_free(_Cs[i]);
+    }
+    _Cs.clear();
+    for (size_t i = 0; i < _COVs.size(); i++)
+    {
+        gsl_matrix_free(_COVs[i]);
+    }
+    _COVs.clear();
+    Fitting();
+}
+void GSL_BSpline_Fit::Fitting()
+{
+    double chisq;
+    for (size_t i = 0; i < _NFields; i++)
+    {
+        _Cs.push_back(gsl_vector_alloc(_NCOEFFS));
+        _COVs.push_back(gsl_matrix_alloc(_NCOEFFS,_NCOEFFS));
+        gsl_vector_view gv = gsl_vector_view_array(_Y_transposed[i].data(),_NDataPoints);
+        gsl_multifit_linear(_XC,&gv.vector,_Cs[i],_COVs[i],&chisq,_mw);
+    }
+}
+VD GSL_BSpline_Fit::valAt(double x)
+{
+    gsl_bspline_eval(x, _B, _bw);
+    VD res(_NFields);
+    double yerr;
+    for (size_t i = 0; i < _NFields; i++)
+    {
+        gsl_multifit_linear_est(_B,_Cs[i],_COVs[i],&res[i],&yerr);
+    }
+    return res;
+}
+VVD GSL_BSpline_Fit::valAt(VD X)
+{
+    VVD res;
+    for (size_t i = 0; i < X.size(); i++)
+    {
+        res.push_back(valAt(X[i]));
+    }
+    return res;
+}
+tuple<VD,VD> GSL_BSpline_Fit::derivAt(double x)
+{
+    gsl_vector_view dBi;
+    gsl_bspline_deriv_eval(x,2,_dB,_bw);
+    VD dY(_NFields);
+    VD d2Y(_NFields);
+    double yerr;
+    for (size_t i = 0; i < _NFields; i++)
+    {
+        dBi = gsl_matrix_column(_dB,1);
+        gsl_multifit_linear_est(&dBi.vector,_Cs[i],_COVs[i],&dY[i],&yerr);
+        dBi = gsl_matrix_column(_dB,2);
+        gsl_multifit_linear_est(&dBi.vector,_Cs[i],_COVs[i],&d2Y[i],&yerr);
+    }
+    return make_tuple(dY,d2Y);
+}
+tuple<VVD,VVD> GSL_BSpline_Fit::derivAt(VD X)
+{
+    VVD dY;
+    VVD d2Y;
+    for (size_t i = 0; i < X.size(); i++)
+    {
+        VD dYi,d2Yi;
+        tie(dYi,d2Yi)=derivAt(X[i]);
+        dY.push_back(dYi);
+        d2Y.push_back(d2Yi);
+    }
+    return make_tuple(dY,d2Y);
 }
