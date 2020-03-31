@@ -1,6 +1,7 @@
 #include "TransitionFinder.h"
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 using namespace std;
 
@@ -53,6 +54,10 @@ void Potential::SetUpPotential()
 
 int main(int argc, char const *argv[])
 {
+    auto start = chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < 10; i++)
+    {
+    
     VVD pts_init(2);
     pts_init[0] = {1,1};
     pts_init[1] = {0,0};
@@ -77,7 +82,10 @@ int main(int argc, char const *argv[])
     }
     fthick.close();
     
-
+    }
+    auto finish = chrono::high_resolution_clock::now();
+    chrono::duration<double> elapsed = finish - start;
+    cout<<" Elapsed time: "<<elapsed.count() << "s"<<endl;
     return 0;
 }
 
