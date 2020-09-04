@@ -90,17 +90,21 @@ int main(int argc, char const *argv[])
         gsl_bspline_eval(xi,B,bw);
 
         // ! fill X
+        // cout<<xi;
         for (j = 0; j < ncoeffs; j++)
         {
             double Bj = gsl_vector_get(B,j);
             gsl_matrix_set(X,i,j,Bj);
+            // cout<<"\t"<<Bj;
         }
+        // cout<<endl;
     }
 
     // ! Do the fit
     // gsl_multifit_wlinear(X,w,y,c,cov,&chisq,mw);
     gsl_multifit_linear(X,y,c,cov,&chisq,mw);
-    
+    gsl_vector_set(c,0,gsl_vector_get(y,0));
+    gsl_vector_set(c,ncoeffs-1,gsl_vector_get(y,n-1));
     dof = n - ncoeffs;
     // tss = gsl_stats_wtss(w->data,1,y->data,1,y->size);
     tss = gsl_stats_tss(y->data,1,y->size);

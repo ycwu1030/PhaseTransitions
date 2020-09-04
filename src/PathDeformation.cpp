@@ -1,5 +1,6 @@
 #include "PathDeformation.h"
 #include "RungeKutta.h"
+#include <algorithm>
 
 using namespace std;
 

@@ -74,19 +74,23 @@ int main(int argc, char const *argv[])
     GSL_BSpline_Fit fitter1(phi-phi_lin,t,K,ncoeffs);
     GSL_BSpline_Fit fitter2(phi,p_dist,K,ncoeffs);
     
+    VVD phi0,phi1,phi2;
     VVD dphi0,dphi1,dphi2;
     VVD d2phi0,d2phi1,d2phi2;
     for (size_t i = 0; i < t.size(); i++)
     {
         VD _dphi,_d2phi;
+        phi0.push_back(fitter0.valAt(t[i]));
         tie(_dphi,_d2phi) = fitter0.derivAt(t[i]);
         dphi0.push_back(_dphi);
         d2phi0.push_back(_d2phi);
 
+        phi1.push_back(fitter1.valAt(t[i])+phi_lin[i]);
         tie(_dphi,_d2phi) = fitter1.derivAt(t[i]);
         dphi1.push_back(_dphi + DelPhi);
         d2phi1.push_back(_d2phi);
 
+        phi2.push_back(fitter2.valAt(p_dist[i]));
         tie(_dphi,_d2phi) = fitter2.derivAt(p_dist[i]);
         dphi2.push_back(_dphi);
         d2phi2.push_back(_d2phi);
@@ -97,10 +101,10 @@ int main(int argc, char const *argv[])
     VD dphi2_dist = pow(dphi2*dphi2,0.5);
 
     ofstream output("BSplineFitter.dat");
-    output<<"t\tpdist\tphix\tphiy\tdphix0\tdphiy0\td2phix0\td2phiy0\tdist0\tdphix1\tdphiy1\td2phix1\td2phiy1\tdist1\tdphix2\tdphiy2\td2phix2\td2phiy2\tdist2"<<endl;
+    output<<"t\tpdist\tphix\tphiy\tphix0\tphiy0\tdphix0\tdphiy0\td2phix0\td2phiy0\tdist0\tphix1\tphiy1\tdphix1\tdphiy1\td2phix1\td2phiy1\tdist1\tphix2\tphiy2\tdphix2\tdphiy2\td2phix2\td2phiy2\tdist2"<<endl;
     for (size_t i = 0; i < t.size(); i++)
     {
-        output<<t[i]<<"\t"<<p_dist[i]<<"\t"<<phi[i]<<"\t"<<dphi0[i]<<"\t"<<d2phi0[i]<<"\t"<<dphi0_dist[i]<<"\t"<<dphi1[i]<<"\t"<<d2phi1[i]<<"\t"<<dphi1_dist[i]<<"\t"<<dphi2[i]<<"\t"<<d2phi2[i]<<"\t"<<dphi2_dist[i]<<endl;
+        output<<t[i]<<"\t"<<p_dist[i]<<"\t"<<phi[i]<<"\t"<<phi0[i]<<"\t"<<dphi0[i]<<"\t"<<d2phi0[i]<<"\t"<<dphi0_dist[i]<<"\t"<<phi1[i]<<"\t"<<dphi1[i]<<"\t"<<d2phi1[i]<<"\t"<<dphi1_dist[i]<<"\t"<<phi2[i]<<"\t"<<dphi2[i]<<"\t"<<d2phi2[i]<<"\t"<<dphi2_dist[i]<<endl;
     }
     output.close();
     

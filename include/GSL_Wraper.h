@@ -27,7 +27,8 @@ private:
     int _K;
     int _NCOEFFS;
     int _NBREAKS;
-    int _NDataPoints;  
+    int _NDataPoints; 
+    bool _FIX_ENDS; 
 
     gsl_bspline_workspace *_bw = nullptr;
     gsl_multifit_linear_workspace *_mw = nullptr;
@@ -42,8 +43,8 @@ private:
     void Fitting();
 
 public:
-    GSL_BSpline_Fit(int k, int ncoeffs);
-    GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs);
+    GSL_BSpline_Fit(int k, int ncoeffs, bool fix_ends = true);
+    GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs, bool fix_ends = true);
     ~GSL_BSpline_Fit();
 
     void SetDataX(VD X);

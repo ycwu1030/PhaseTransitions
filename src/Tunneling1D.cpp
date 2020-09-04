@@ -44,6 +44,7 @@ using namespace boost::math;
 //     return r;
 // }
 
+// * function used by RungeKutta 
 VD func_for_rkqc(double r, VD y, void *param)
 {
     Tunneling1D *mod = (Tunneling1D*) param;
@@ -156,7 +157,7 @@ double func_for_findRScale(double x, void *params)
 }
 double Tunneling1D::findRScale()
 {
-    if (isnan(phi_bar)) findBarrierLocation();
+    if (std::isnan(phi_bar)) findBarrierLocation();
     double phi_tol = abs(phi_bar - phi_metaMin)*1e-6;
     double x1 = min(phi_bar,phi_metaMin);
     double x2 = max(phi_bar,phi_metaMin);
@@ -214,7 +215,7 @@ tuple<double, double> Tunneling1D::exactSolution(double r, double phi0, double d
             dphi *= tgamma(nu+1)*dV_/d2V_;
             phi += phi0;
         }
-        catch(const boost::wrapexcept<std::overflow_error>& e)
+        catch(const std::overflow_error& e)
         {
             // std::cerr << e.what() << '\n';
             // just ignore the overflow
@@ -374,6 +375,8 @@ tuple<double, VD, CONVERGENCETYPE> Tunneling1D::integrateProfile(double r0, VD y
         // cout<<"\t\t\t"<<y_diff[0]<<"/"<<epsabs<<"  "<<y_diff[1]<<"/"<<epsabs<<endl;
         if ( y_diff[0] < epsabs && y_diff[1] < epsabs)
         {
+            r = r_cache;
+            y = y_cache;
             convergQ = CONVERGED;
             break;
         }
@@ -454,7 +457,7 @@ tuple<VD, VD, VD, double> Tunneling1D::integrateAndSaveProfile(VD R, VD y0, doub
             dr_did = drmin;
             dr_next = drmin;
             r_cache = r + dr_did;
-            if (!(isnan(Rerr)))
+            if (!(std::isnan(Rerr)))
             {
                 Rerr = r_cache;
             }
@@ -486,7 +489,7 @@ tuple<VD,VD,VD,double> Tunneling1D::findProfile(double xguess,double xtol,double
     double xmin = xtol*10;
     double xmax = INFINITY;
     double x;
-    if (!isnan(xguess))
+    if (!std::isnan(xguess))
     {
         x = xguess;
     }
@@ -524,7 +527,7 @@ tuple<VD,VD,VD,double> Tunneling1D::findProfile(double xguess,double xtol,double
         // cout<<"\tInitial condition: r0="<<r0_<<"  phi0="<<phi0<<" dphi0="<<dphi0<<endl;
         if ( !std::isfinite(r0_) || !std::isfinite(x))
         {
-            if (isnan(rf))
+            if (std::isnan(rf))
             {
                 cerr<<"Failed to retrieve initial conditions on the first try"<<endl;
             }

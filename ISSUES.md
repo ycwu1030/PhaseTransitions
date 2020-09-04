@@ -11,3 +11,4 @@
   - For some situation, this case happens when two phases have tiny overlap in temperature due to the poor precision in determining the local minima around that temperature.
     - At first place, I though this was the precision problem (the program didn't get the local minimum with sufficient precision). Thus I reconstruct the precision control parameter, put them into a structure which can be modified anywhere. However, I found that just checking the step-size after each step for for minimization convergence is really bad. Thus I change back to checking gradient.
   - For the ISSUE05 itself, I need to get the test-case. 
+- [ ] #6 The precision in Tunneling1D when finding the profile. dphi/dr can have tremendously different scale from phi itself.

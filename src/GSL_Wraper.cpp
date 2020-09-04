@@ -337,21 +337,23 @@ VD GSL_Multi_Spline_Inter::valAt(double xi, int deri)
     }
     return res;
 }
-GSL_BSpline_Fit::GSL_BSpline_Fit(int k, int ncoeffs)
+GSL_BSpline_Fit::GSL_BSpline_Fit(int k, int ncoeffs, bool fix_ends)
 {
     _K = k;
     _NCOEFFS = ncoeffs;
     _NBREAKS = _NCOEFFS + 2 - _K;
+    _FIX_ENDS = fix_ends;
 
     _bw = gsl_bspline_alloc(_K,_NBREAKS);
     _B = gsl_vector_alloc(_NCOEFFS);
     _dB = gsl_matrix_alloc(_NCOEFFS,3);
 }
-GSL_BSpline_Fit::GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs)
+GSL_BSpline_Fit::GSL_BSpline_Fit(VVD Y, VD X, int k, int ncoeffs, bool fix_ends)
 {
     _K = k;
     _NCOEFFS = ncoeffs;
     _NBREAKS = _NCOEFFS + 2 - _K;
+    _FIX_ENDS = fix_ends;
 
     _bw = gsl_bspline_alloc(_K,_NBREAKS);
     _B = gsl_vector_alloc(_NCOEFFS);
@@ -433,6 +435,13 @@ void GSL_BSpline_Fit::Fitting()
         _COVs.push_back(gsl_matrix_alloc(_NCOEFFS,_NCOEFFS));
         gsl_vector_view gv = gsl_vector_view_array(_Y_transposed[i].data(),_NDataPoints);
         gsl_multifit_linear(_XC,&gv.vector,_Cs[i],_COVs[i],&chisq,_mw);
+        if (_FIX_ENDS)
+        {
+            // * Try to fixing the two end points!!!
+            cout<<_Y_transposed[i].front()<<"\t"<<_Y_transposed[i].back()<<endl;
+            gsl_vector_set(_Cs[i],0,_Y_transposed[i].front());
+            gsl_vector_set(_Cs[i],_NCOEFFS-1,_Y_transposed[i].back());
+        } 
     }
 }
 VD GSL_BSpline_Fit::valAt(double x)
