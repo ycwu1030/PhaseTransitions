@@ -1,7 +1,8 @@
 build/
 bin/
 lib/
-aux/
+data/
+auxillary/
 .vscode/
 *~
 .DS_Store
