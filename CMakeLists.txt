@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0 FATAL_ERROR)
 PROJECT(PhaseTransitions CXX)
 
 
-SET(PhaseTransition_VERSION "0.2")
+SET(PhaseTransition_VERSION "0.2.1")
 
 find_package(GSL 2.1 REQUIRED)
 find_package(Boost 1.40 REQUIRED math_tr1l)
