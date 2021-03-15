@@ -438,7 +438,7 @@ void GSL_BSpline_Fit::Fitting()
         if (_FIX_ENDS)
         {
             // * Try to fixing the two end points!!!
-            cout<<_Y_transposed[i].front()<<"\t"<<_Y_transposed[i].back()<<endl;
+            // cout<<_Y_transposed[i].front()<<"\t"<<_Y_transposed[i].back()<<endl;
             gsl_vector_set(_Cs[i],0,_Y_transposed[i].front());
             gsl_vector_set(_Cs[i],_NCOEFFS-1,_Y_transposed[i].back());
         } 

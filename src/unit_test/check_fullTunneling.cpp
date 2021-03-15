@@ -55,7 +55,7 @@ void Potential::SetUpPotential()
 int main(int argc, char const *argv[])
 {
     auto start = chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < 10; i++)
+    for (size_t j = 0; j < 10; j++)
     {
     
     VVD pts_init(2);
