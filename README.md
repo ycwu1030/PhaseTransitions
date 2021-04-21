@@ -1,5 +1,5 @@
 # PhaseTransitions
-C++ version of CosmoTransitions
+C++ Library for Calculations of Electroweak Phase Transition.
 
 ## Status
 - [x] Tracing Phases for Potential
